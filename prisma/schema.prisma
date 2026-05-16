@@ -1,0 +1,356 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  name          String
+  image         String?
+  role          String    @default("STUDENT")
+  isActive      Boolean   @default(true)
+  isSuspended   Boolean   @default(false)
+  studentId     String?
+  department    String?
+  batch         String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  classes           ClassMembership[]
+  ownedProjects     Project[]             @relation("ProjectOwner")
+  groupMemberships  GroupMember[]
+  comments          Comment[]
+  notifications     Notification[]        @relation("NotificationRecipient")
+  activities        ActivityLog[]
+  submissions       MilestoneSubmission[]
+  sentNotifications Notification[]        @relation("NotificationSender")
+  createdClasses    Class[]               @relation("ClassCreator")
+  taughtClasses     Class[]               @relation("ClassTeacher")
+  createdGroups     Group[]               @relation("GroupCreator")
+  fileAttachments   FileAttachment[]
+
+  @@index([email])
+  @@index([role])
+  @@index([studentId])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Class {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  description String?
+  section     String?
+  semester    String
+  year        Int
+  creatorId   String
+  teacherId   String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator  User              @relation("ClassCreator", fields: [creatorId], references: [id])
+  teacher  User              @relation("ClassTeacher", fields: [teacherId], references: [id])
+  members  ClassMembership[]
+  groups   Group[]
+  projects Project[]
+
+  @@index([code])
+  @@index([teacherId])
+  @@index([creatorId])
+  @@map("classes")
+}
+
+model ClassMembership {
+  id       String   @id @default(uuid())
+  classId  String
+  userId   String
+  role     String   @default("STUDENT")
+  joinedAt DateTime @default(now())
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, userId])
+  @@index([classId])
+  @@index([userId])
+  @@map("class_memberships")
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  classId   String
+  projectId String?  @unique
+  creatorId String
+  maxSize   Int      @default(5)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class   Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  creator User          @relation("GroupCreator", fields: [creatorId], references: [id])
+  project Project?      @relation(fields: [projectId], references: [id])
+  members GroupMember[]
+
+  @@index([classId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String   @id @default(uuid())
+  groupId  String
+  userId   String
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model Project {
+  id            String    @id @default(uuid())
+  title         String
+  description   String?
+  techStack     String    @default("[]")
+  repoUrl       String?
+  liveUrl       String?
+  status        String    @default("PLANNED")
+  priority      String    @default("medium")
+  completionPct Int       @default(0)
+  ownerId       String
+  classId       String
+  tags          String    @default("[]")
+  dueDate       DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
+  class        Class              @relation(fields: [classId], references: [id])
+  group        Group?
+  milestones   Milestone[]
+  comments     Comment[]
+  activities   ActivityLog[]
+  attachments  FileAttachment[]
+  repositories GitHubRepository[]
+
+  @@index([ownerId])
+  @@index([classId])
+  @@index([status])
+  @@index([ownerId, status])
+  @@map("projects")
+}
+
+model Milestone {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  projectId   String
+  status      String    @default("PENDING")
+  order       Int
+  weight      Int       @default(1)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submissions MilestoneSubmission[]
+
+  @@index([projectId])
+  @@index([projectId, status])
+  @@map("milestones")
+}
+
+model MilestoneSubmission {
+  id          String   @id @default(uuid())
+  milestoneId String
+  userId      String
+  content     String?
+  notes       String?
+  grade       Int?
+  feedback    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([milestoneId])
+  @@index([userId])
+  @@map("milestone_submissions")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  projectId String
+  userId    String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model GitHubRepository {
+  id               String    @id @default(uuid())
+  projectId        String
+  fullName         String
+  url              String
+  defaultBranch    String    @default("main")
+  lastCommitSha    String?
+  lastCommitMsg    String?
+  lastCommitAt     DateTime?
+  contributorCount Int?
+  commitCount24h   Int       @default(0)
+  commitCount7d    Int       @default(0)
+  isPrivate        Boolean   @default(false)
+  syncedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, fullName])
+  @@index([projectId])
+  @@map("github_repositories")
+}
+
+model FileAttachment {
+  id         String   @id @default(uuid())
+  projectId  String
+  uploaderId String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  url        String
+  key        String
+  createdAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [uploaderId], references: [id])
+
+  @@index([projectId])
+  @@map("file_attachments")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  message     String
+  link        String?
+  senderId    String?
+  recipientId String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender    User? @relation("NotificationSender", fields: [senderId], references: [id])
+  recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, isRead])
+  @@index([recipientId, createdAt])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  type        String
+  description String
+  projectId   String?
+  userId      String
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String
+  entityId   String
+  actorId    String
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
