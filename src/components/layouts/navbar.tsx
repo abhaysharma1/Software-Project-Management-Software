@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -25,6 +25,22 @@ export function Navbar() {
   const router = useRouter()
   const { setOpen: setSearchOpen } = useSearch()
   const [signingOut, setSigningOut] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    async function fetchUnreadCount() {
+      try {
+        const res = await fetch("/api/notifications?unreadOnly=true&count=true")
+        if (res.ok) {
+          const data = await res.json()
+          setUnreadCount(data.count)
+        }
+      } catch { /* ignore */ }
+    }
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
@@ -45,9 +61,11 @@ export function Navbar() {
 
       <Link href="/notifications" className="relative inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted h-8 w-8">
         <Bell className="h-4 w-4" />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
-          3
-        </span>
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 min-w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </Link>
 
       <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>

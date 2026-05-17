@@ -16,7 +16,7 @@ export const authConfig: NextAuthConfig = {
       const pathname = nextUrl.pathname
 
       const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/register") ||
-        pathname.startsWith("/forgot-password") || pathname.startsWith("/verify")
+        pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password") || pathname.startsWith("/verify")
       const isApiAuth = pathname.startsWith("/api/auth")
 
       if (isAuthPage || isApiAuth) return true

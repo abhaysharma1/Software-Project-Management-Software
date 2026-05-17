@@ -33,6 +33,7 @@ export default async function StudentProjectDetailPage(props: { params: Promise<
         orderBy: { createdAt: "desc" },
       },
       repositories: true,
+      attachments: { orderBy: { createdAt: "desc" } },
     },
   })
 

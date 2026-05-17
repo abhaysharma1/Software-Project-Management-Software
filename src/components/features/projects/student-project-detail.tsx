@@ -13,11 +13,12 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ArrowLeft, GitBranch, ExternalLink, Calendar, MessageSquare,
-  CheckCircle2, XCircle, Clock, Users, Send, Loader2, Upload,
+  CheckCircle2, XCircle, Clock, Users, Send, Loader2, Upload, Paperclip, Trash2,
 } from "lucide-react"
 import { getInitials, getStatusColor, formatDate, formatDateRelative } from "@/lib/utils"
 import { toast } from "sonner"
-import type { Milestone, MilestoneSubmission, Comment, GitHubRepository, Group, GroupMember } from "@prisma/client"
+import { UploadButton } from "@/lib/uploadthing"
+import type { Milestone, MilestoneSubmission, Comment, GitHubRepository, Group, GroupMember, FileAttachment } from "@prisma/client"
 
 interface StudentProjectDetailProps {
   project: {
@@ -37,6 +38,7 @@ interface StudentProjectDetailProps {
     milestones: (Milestone & { submissions: MilestoneSubmission[] })[]
     comments: (Comment & { user: { id: string; name: string; image: string | null }; replies: (Comment & { user: { id: string; name: string; image: string | null } })[] })[]
     repositories: GitHubRepository[]
+    attachments: FileAttachment[]
   }
   userId: string
 }
@@ -48,6 +50,7 @@ export function StudentProjectDetail({ project, userId }: StudentProjectDetailPr
   const [submitContent, setSubmitContent] = useState("")
   const [submitNotes, setSubmitNotes] = useState("")
   const [activeMilestone, setActiveMilestone] = useState<string | null>(null)
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, { name: string; url: string; key: string; size: number; type: string }[]>>({})
 
   const techStack = parseJsonArray(project.techStack)
   const tags = parseJsonArray(project.tags)
@@ -83,10 +86,29 @@ export function StudentProjectDetail({ project, userId }: StudentProjectDetailPr
         body: JSON.stringify({ milestoneId, content: submitContent, notes: submitNotes }),
       })
       if (!res.ok) { const err = await res.json(); toast.error(err.error || "Failed to submit"); setSubmitting(null); return }
+
+      // Save uploaded file records
+      const files = uploadedFiles[milestoneId] || []
+      for (const f of files) {
+        await fetch("/api/files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: project.id,
+            fileName: f.name,
+            fileSize: f.size,
+            mimeType: f.type,
+            url: f.url,
+            key: f.key,
+          }),
+        })
+      }
+
       toast.success("Milestone submitted!")
       setSubmitContent("")
       setSubmitNotes("")
       setActiveMilestone(null)
+      setUploadedFiles((prev) => { const next = { ...prev }; delete next[milestoneId]; return next })
       setSubmitting(null)
       router.refresh()
     } catch { toast.error("Something went wrong"); setSubmitting(null) }
@@ -187,6 +209,44 @@ export function StudentProjectDetail({ project, userId }: StudentProjectDetailPr
                               onChange={(e) => setSubmitContent(e.target.value)} rows={3} disabled={submitting !== null} />
                             <Textarea placeholder="Additional notes (optional)" value={submitNotes}
                               onChange={(e) => setSubmitNotes(e.target.value)} rows={2} className="text-sm" disabled={submitting !== null} />
+
+                            {/* File upload */}
+                            <div className="space-y-2">
+                              <p className="text-xs text-muted-foreground font-medium">Attachments</p>
+                              <UploadButton
+                                endpoint="attachment"
+                                onClientUploadComplete={(res) => {
+                                  const files = res.map((f) => ({
+                                    name: f.name,
+                                    url: f.url,
+                                    key: f.key,
+                                    size: f.size,
+                                    type: f.type,
+                                  }))
+                                  setUploadedFiles((prev) => ({ ...prev, [ms.id]: [...(prev[ms.id] || []), ...files] }))
+                                  toast.success("Files uploaded")
+                                }}
+                                onUploadError={(err) => {
+                                  toast.error(err.message || "Upload failed")
+                                }}
+                                appearance={{
+                                  button: { fontSize: "12px", padding: "4px 12px", height: "auto" },
+                                  allowedContent: { fontSize: "11px" },
+                                }}
+                              />
+                              {uploadedFiles[ms.id] && uploadedFiles[ms.id].length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {uploadedFiles[ms.id].map((f) => (
+                                    <a key={f.key} href={f.url} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs bg-background border rounded px-2 py-1 hover:bg-muted transition-colors">
+                                      <Paperclip className="h-3 w-3" />
+                                      <span className="max-w-[120px] truncate">{f.name}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => submitMilestone(ms.id)} disabled={submitting !== null || !submitContent.trim()}>
                                 {submitting === `submit-${ms.id}` ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
