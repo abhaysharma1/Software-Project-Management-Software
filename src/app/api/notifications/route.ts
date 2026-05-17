@@ -1,31 +1,20 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { notificationService } from "@/services/notification.service"
 
 export async function GET(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const url = new URL(req.url)
-  const unreadOnly = url.searchParams.get("unreadOnly") === "true"
-  const countOnly = url.searchParams.get("count") === "true"
+  const count = url.searchParams.get("count")
 
-  const where = {
-    recipientId: session.user.id,
-    ...(unreadOnly ? { isRead: false } : {}),
-  } as const
-
-  if (countOnly) {
-    const count = await prisma.notification.count({ where })
-    return NextResponse.json({ count })
+  if (count === "true") {
+    const unreadCount = await notificationService.getUnreadCount(session.user.id)
+    return NextResponse.json({ count: unreadCount })
   }
 
-  const notifications = await prisma.notification.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  })
-
+  const notifications = await notificationService.listNotifications(session.user.id)
   return NextResponse.json(notifications)
 }
 
@@ -33,16 +22,14 @@ export async function PATCH(req: Request) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const all = body.all === true
-
-  if (all) {
-    await prisma.notification.updateMany({
-      where: { recipientId: session.user.id, isRead: false },
-      data: { isRead: true },
-    })
-    return NextResponse.json({ success: true })
+  try {
+    const body = await req.json()
+    if (body.all === true) {
+      const result = await notificationService.markAllAsRead(session.user.id)
+      return NextResponse.json(result)
+    }
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+  } catch (error) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-
-  return NextResponse.json({ error: "Specify notifications to mark" }, { status: 400 })
 }

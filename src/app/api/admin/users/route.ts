@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
-import { z } from "zod"
-
-const createSchema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
-  password: z.string().min(8),
-  role: z.enum(["STUDENT", "TEACHER", "ADMIN"]),
-  studentId: z.string().optional(),
-  department: z.string().optional(),
-})
+import { createUserSchema } from "@/validators/user"
+import { userService } from "@/services/user.service"
+import { ZodError } from "zod"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -23,20 +14,7 @@ export async function GET(req: Request) {
   const search = url.searchParams.get("search") || ""
   const role = url.searchParams.get("role") || ""
 
-  const where: Record<string, unknown> = {}
-  if (role) where.role = role
-  if (search) {
-    where.OR = [
-      { name: { contains: search } },
-      { email: { contains: search } },
-    ]
-  }
-
-  const users = await prisma.user.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  })
-
+  const users = await userService.listUsers({ search, role })
   return NextResponse.json(users)
 }
 
@@ -48,30 +26,15 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const data = createSchema.parse(body)
-
-    const existing = await prisma.user.findUnique({ where: { email: data.email } })
-    if (existing) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 400 })
-    }
-
-    const passwordHash = await bcrypt.hash(data.password, 12)
-
-    const user = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        passwordHash,
-        role: data.role,
-        studentId: data.studentId,
-        department: data.department,
-      },
-    })
-
+    const data = createUserSchema.parse(body)
+    const user = await userService.createUser(data)
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

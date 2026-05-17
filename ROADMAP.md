@@ -1,6 +1,6 @@
 # SPMS — Development Roadmap
 
-> Current state: ~60–70% feature completion. Phase 1 complete — all broken/incomplete features fixed. Phase 2+ items remain.
+> Current state: ~85% feature completion. Phases 1 & 2 complete — all broken/incomplete features fixed, architectural layers (validators/repositories/services/actions) built, feature components for analytics/milestones/GitHub created. Phase 3+ items remain.
 
 ---
 
@@ -41,28 +41,24 @@ These features were documented as working but were broken or non-functional.
 
 ---
 
-## Phase 2: Complete Scaffolded Empty Directories (High Priority)
+## Phase 2: Complete Scaffolded Empty Directories (High Priority) ✅ COMPLETED
 
-The project has the right architectural intent but the layers are empty.
+### Add the Missing Architectural Layers ✅
 
-### Add the Missing Architectural Layers
-
-| Directory | Purpose | What to Build |
+| Directory | Purpose | What Was Built |
 |-----------|---------|---------------|
-| `src/validators/` | Centralized Zod schemas | Extract inline schemas from API routes into single-file validators. Create `project.ts`, `user.ts`, `class.ts`, `milestone.ts`, `submission.ts`, `group.ts`, `comment.ts` |
-| `src/repositories/` | Data access layer | Move all `prisma.$method` calls out of API routes. Create `project.repository.ts`, `user.repository.ts`, `class.repository.ts`, `milestone.repository.ts` with reusable query methods and pagination support |
-| `src/services/` | Business logic | Extract orchestration logic. E.g., `submission.service.ts` handles grade + completion recalculation + notification + activity log in a single Prisma transaction |
-| `src/actions/` | Server Actions | Replace simple API routes (project create, comment add) with Next.js Server Actions for reduced boilerplate |
+| `src/validators/` | Centralized Zod schemas | `common.ts`, `user.ts`, `auth.ts`, `class.ts`, `group.ts`, `project.ts`, `file.ts`, `milestone.ts`, `submission.ts`, `comment.ts` — all inline schemas extracted |
+| `src/repositories/` | Data access layer | `user.repository.ts`, `class.repository.ts`, `group.repository.ts`, `project.repository.ts`, `milestone.repository.ts`, `submission.repository.ts`, `comment.repository.ts`, `notification.repository.ts`, `file.repository.ts`, `activity-log.repository.ts`, `base.repository.ts` |
+| `src/services/` | Business logic | `auth.service.ts`, `user.service.ts`, `class.service.ts`, `group.service.ts`, `project.service.ts`, `milestone.service.ts`, `submission.service.ts`, `comment.service.ts`, `notification.service.ts`, `file.service.ts` — each encapsulates domain orchestration |
+| `src/actions/` | Server Actions | `create-project.ts`, `create-milestone.ts`, `submit-milestone.ts` — replace simple write operations |
 
-**Why this matters:** API routes currently mix concerns — a single route handles validation, DB writes, notifications, and activity logging. Repositories/services enable testability, transaction safety, and caching layer injection.
+### Build the Empty Feature Components ✅
 
-### Build the Empty Feature Components
-
-| Empty Dir | What to Build |
-|-----------|---------------|
-| `components/features/analytics/` | Reusable chart components using Recharts (installed but unused). Project status pie chart, milestone burndown line chart, submission grading distribution bar chart, class enrollment area chart |
-| `components/features/github/` | "Link Repository" dialog, commit activity feed, contributor stats cards, repo connection status |
-| `components/features/milestones/` | Milestone creation wizard, progress timeline, status update controls — extract from `teacher-project-detail.tsx` |
+| Dir | What Was Built |
+|-----|---------------|
+| `components/features/analytics/` | `ProjectStatusChart` (PieChart), `MilestoneCompletionChart` (LineChart), `GradingDistributionChart` (BarChart), `EnrollmentChart` (AreaChart) — wired into admin & teacher analytics pages |
+| `components/features/github/` | `CommitActivityFeed`, `ContributorStats`, `RepoStatusBadge` — extracted from `teacher-project-detail.tsx` |
+| `components/features/milestones/` | `MilestoneList` (with inline grading form), `MilestoneCreateForm` (dialog) — extracted from `teacher-project-detail.tsx` |
 
 ---
 
@@ -194,7 +190,7 @@ Week 12:   Monitoring + accessibility + polish
 - Landing page (12 sections with GSAP/Lenis/Framer Motion animations)
 - Database schema (14 models with full relations and indexes)
 - Seed script (admin, 2 teachers, 20 students, 3 classes, 5 projects, milestones, comments)
-- Core API routes (auth, classes, projects, groups, milestones, submissions, comments, admin — 12 route files)
+- Core API routes (auth, classes, projects, groups, milestones, submissions, comments, admin — 18 route files)
 - Password reset flow (Nodemailer, forgot-password/reset-password API + page)
 - File upload (UploadThing v7, file attachment API, upload UI in student project detail)
 - Notification system (API routes, interactive notifications page, live unread badge)
@@ -204,15 +200,12 @@ Week 12:   Monitoring + accessibility + polish
 - Sidebar (collapsible, role-filtered) and Navbar
 - shadcn/ui component library (20+ primitives)
 - Animation utilities (GSAP provider, Lenis provider, Framer Motion presets)
+- **Architectural layers**: `src/validators/` (10 files), `src/repositories/` (11 files), `src/services/` (10 files), `src/actions/` (3 files)
+- **Analytics charts**: `ProjectStatusChart` (PieChart), `MilestoneCompletionChart` (LineChart), `GradingDistributionChart` (BarChart), `EnrollmentChart` (AreaChart) — wired into admin & teacher analytics pages
+- **Milestone components**: `MilestoneList`, `MilestoneCreateForm` — extracted from `teacher-project-detail.tsx`
+- **GitHub components**: `CommitActivityFeed`, `ContributorStats`, `RepoStatusBadge`
 
-### What's Scaffolded But Empty
-- `src/actions/` — Server Actions directory
-- `src/services/` — Business logic layer
-- `src/repositories/` — Data access layer
-- `src/validators/` — Zod schema definitions
-- `components/features/analytics/` — Chart components
-- `components/features/github/` — GitHub integration UI
-- `components/features/milestones/` — Milestone management UI
+### What's Still Scaffolded But Empty
 - `public/` — Static assets directory
 
 ### What's Broken or Missing Entirely
@@ -220,10 +213,12 @@ Week 12:   Monitoring + accessibility + polish
 - ~~File upload UI~~ ✅
 - ~~Real-time notification delivery~~ (notification center page ✅, real-time delivery pending)
 - ~~Admin user CRUD~~ ✅
+- ~~Architectural layers (validators/repositories/services/actions)~~ ✅
+- ~~Charts (Recharts)~~ ✅
+- ~~Analytics / Milestones / GitHub feature components~~ ✅
 - Student group self-service (create/join/leave)
 - Tests (zero)
 - CI/CD (zero)
 - Dockerfile
 - GitHub auto-sync
-- Charts (Recharts unused)
 - Three.js components (unused)

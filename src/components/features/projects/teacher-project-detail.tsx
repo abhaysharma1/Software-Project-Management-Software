@@ -3,24 +3,24 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ArrowLeft, GitBranch, ExternalLink, Calendar, MessageSquare,
-  CheckCircle2, XCircle, Clock, Users, FileText, Loader2, Send,
-  ChevronDown, ChevronUp, Award,
+  CheckCircle2, XCircle, Users, FileText, Loader2, Send,
 } from "lucide-react"
 import { getInitials, getStatusColor, formatDate, formatDateRelative } from "@/lib/utils"
 import { toast } from "sonner"
+import { MilestoneList } from "@/components/features/milestones/milestone-list"
+import { CommitActivityFeed } from "@/components/features/github/commit-activity-feed"
+import { ContributorStats } from "@/components/features/github/contributor-stats"
 import type { Milestone, MilestoneSubmission, Comment, GitHubRepository, ActivityLog, Group, GroupMember } from "@prisma/client"
 
 interface ProjectDetail {
@@ -48,7 +48,7 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
   const router = useRouter()
   const [commentText, setCommentText] = useState("")
   const [submitting, setSubmitting] = useState<string | null>(null)
-  const [gradingStates, setGradingStates] = useState<Record<string, { grade: string; feedback: string; open: boolean }>>({})
+  const [gradingStates, setGradingStates] = useState<Record<string, { grade: string; feedback: string }>>({})
 
   const techStack = parseJsonArray(project.techStack)
   const tags = parseJsonArray(project.tags)
@@ -74,24 +74,16 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
     } catch { toast.error("Something went wrong"); setSubmitting(null) }
   }
 
-  async function gradeSubmission(submissionId: string, milestoneId: string) {
-    const state = gradingStates[submissionId]
-    if (!state || !state.grade) return
-
+  async function handleGrade(submissionId: string, grade: number, feedback: string) {
     setSubmitting(`grade-${submissionId}`)
     try {
       const res = await fetch("/api/submissions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          submissionId,
-          grade: parseInt(state.grade),
-          feedback: state.feedback,
-        }),
+        body: JSON.stringify({ submissionId, grade, feedback }),
       })
       if (!res.ok) { toast.error("Failed to grade"); setSubmitting(null); return }
       toast.success("Graded successfully")
-      setGradingStates((prev) => ({ ...prev, [submissionId]: { ...prev[submissionId], open: false } }))
       setSubmitting(null)
       router.refresh()
     } catch { toast.error("Something went wrong"); setSubmitting(null) }
@@ -99,7 +91,6 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
 
   return (
     <div className="space-y-6">
-      {/* Back + Header */}
       <div className="flex items-center gap-4">
         <Link href="/teacher/projects" className="inline-flex items-center justify-center rounded-md hover:bg-accent h-7 w-7">
             <ArrowLeft className="h-4 w-4" />
@@ -114,11 +105,8 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
         </div>
       </div>
 
-      {/* Main Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Overview */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Overview Card */}
           <Card>
             <CardHeader><CardTitle>Overview</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -162,89 +150,21 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
             </CardContent>
           </Card>
 
-          {/* Milestones */}
           <Card>
             <CardHeader><CardTitle>Milestones</CardTitle></CardHeader>
             <CardContent>
-              {project.milestones.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No milestones defined</p>
-              ) : (
-                <div className="space-y-4">
-                  {project.milestones.map((ms) => {
-                    const submission = ms.submissions[0]
-                    const gs = gradingStates[submission?.id || ""] || { grade: "", feedback: "", open: false }
-                    return (
-                      <div key={ms.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">#{ms.order}</span>
-                              <span className="font-medium">{ms.title}</span>
-                              <Badge className={getStatusColor(ms.status)}>{ms.status.replace("_", " ")}</Badge>
-                            </div>
-                            {ms.description && <p className="text-xs text-muted-foreground mt-1">{ms.description}</p>}
-                          </div>
-                          <div className="text-right text-xs text-muted-foreground">
-                            {ms.dueDate && <p>Due: {formatDate(ms.dueDate)}</p>}
-                            <p>Weight: {ms.weight}</p>
-                          </div>
-                        </div>
-
-                        {submission && ms.status === "SUBMITTED" && (
-                          <div className="mt-3 bg-muted/50 rounded p-3 space-y-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Avatar className="h-5 w-5"><AvatarImage src={submission.user.image || ""} /><AvatarFallback className="text-[8px]">{getInitials(submission.user.name)}</AvatarFallback></Avatar>
-                                <span className="text-xs font-medium">{submission.user.name}</span>
-                                <span className="text-xs text-muted-foreground">{formatDateRelative(submission.createdAt)}</span>
-                              </div>
-                              <p className="text-sm">{submission.content}</p>
-                            </div>
-
-                            {!submission.grade ? (
-                              <div className="space-y-2">
-                                <div className="flex gap-2">
-                                  <Input type="number" min={0} max={100} placeholder="Grade (0-100)" className="w-32"
-                                    value={gs.grade}
-                                    onChange={(e) => setGradingStates((p) => ({ ...p, [submission.id]: { ...p[submission.id], grade: e.target.value } }))} />
-                                  <Button size="sm" onClick={() => gradeSubmission(submission.id, ms.id)} disabled={submitting !== null || !gs.grade}>
-                                    {submitting === `grade-${submission.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Award className="h-3 w-3" />}
-                                    {submitting === `grade-${submission.id}` ? "Grading..." : "Grade"}
-                                  </Button>
-                                </div>
-                                <Input placeholder="Feedback (optional)" value={gs.feedback}
-                                  onChange={(e) => setGradingStates((p) => ({ ...p, [submission.id]: { ...p[submission.id], feedback: e.target.value } }))} />
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-4 text-sm">
-                                <span className="font-bold text-lg">{submission.grade}/100</span>
-                                {submission.feedback && <span className="text-muted-foreground">&ldquo;{submission.feedback}&rdquo;</span>}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {submission?.grade !== null && submission && (
-                          <div className="mt-2 flex items-center gap-2 text-sm">
-                            {submission.grade !== null && submission.grade >= 50
-                              ? <CheckCircle2 className="h-4 w-4 text-primary" />
-                              : submission.grade !== null
-                                ? <XCircle className="h-4 w-4 text-destructive" />
-                                : null}
-                            <span className={submission.grade !== null && submission.grade >= 50 ? "text-primary" : "text-destructive"}>
-                              {submission.grade !== null ? `Grade: ${submission.grade}/100` : ""}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <MilestoneList
+                milestones={project.milestones}
+                onGrade={handleGrade}
+                isGrading={submitting}
+                gradingStates={gradingStates}
+                onGradingChange={(id, field, value) =>
+                  setGradingStates((p) => ({ ...p, [id]: { ...p[id], [field]: value } }))
+                }
+              />
             </CardContent>
           </Card>
 
-          {/* Comments */}
           <Card>
             <CardHeader><CardTitle>Comments & Feedback</CardTitle></CardHeader>
             <CardContent className="space-y-4">
@@ -290,9 +210,7 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
           </Card>
         </div>
 
-        {/* Right Column - Activity + GitHub */}
         <div className="space-y-6">
-          {/* Recent Activity */}
           <Card>
             <CardHeader><CardTitle>Activity Log</CardTitle></CardHeader>
             <CardContent>
@@ -312,24 +230,15 @@ export function TeacherProjectDetail({ project, userId }: { project: ProjectDeta
             </CardContent>
           </Card>
 
-          {/* GitHub Repos */}
           {project.repositories.length > 0 && (
             <Card>
-              <CardHeader><CardTitle>GitHub Repositories</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                {project.repositories.map((repo) => (
-                  <div key={repo.id} className="border rounded p-3">
-                    <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
-                      <GitBranch className="h-3 w-3" /> {repo.fullName}
-                    </a>
-                    {repo.lastCommitMsg && <p className="text-xs text-muted-foreground mt-1">{repo.lastCommitMsg}</p>}
-                    <div className="flex gap-3 text-xs text-muted-foreground mt-2">
-                      {repo.lastCommitAt && <span>Last commit: {formatDateRelative(repo.lastCommitAt)}</span>}
-                      {repo.contributorCount !== null && <span>{repo.contributorCount} contributors</span>}
-                      <span>{repo.commitCount7d} commits/7d</span>
-                    </div>
-                  </div>
-                ))}
+              <CardHeader>
+                <CardTitle>GitHub Repositories</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ContributorStats repos={project.repositories} />
+                <Separator />
+                <CommitActivityFeed repos={project.repositories} />
               </CardContent>
             </Card>
           )}

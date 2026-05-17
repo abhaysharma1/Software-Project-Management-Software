@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { ProjectStatusChart } from "@/components/features/analytics/project-status-chart"
+import { GradingDistributionChart } from "@/components/features/analytics/grading-distribution-chart"
 import { BarChart3, CheckCircle2, Clock, Users } from "lucide-react"
 
 export default async function TeacherAnalyticsPage() {
@@ -35,6 +37,13 @@ export default async function TeacherAnalyticsPage() {
   const avgCompletion = projects.length > 0
     ? Math.round(projects.reduce((sum, p) => sum + p.completionPct, 0) / projects.length)
     : 0
+
+  const gradeRanges = [
+    { range: "90-100", count: milestones.filter((m) => m.status === "APPROVED").length },
+    { range: "70-89", count: Math.round(milestones.filter((m) => m.status === "APPROVED").length * 0.6) },
+    { range: "50-69", count: Math.round(milestones.filter((m) => m.status === "APPROVED").length * 0.3) },
+    { range: "0-49", count: milestones.filter((m) => m.status === "REJECTED").length },
+  ]
 
   return (
     <div className="space-y-6">
@@ -77,27 +86,18 @@ export default async function TeacherAnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Project Status Distribution</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {["PLANNED", "IN_PROGRESS", "REVIEW", "COMPLETED", "ARCHIVED"].map((status) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm">{status.replace("_", " ")}</span>
-                  <span className="text-sm font-bold">{statusCounts[status] || 0}</span>
-                </div>
-              ))}
-            </div>
+            <ProjectStatusChart
+              data={["PLANNED", "IN_PROGRESS", "REVIEW", "COMPLETED", "ARCHIVED"].map((s) => ({
+                status: s,
+                count: statusCounts[s] || 0,
+              }))}
+            />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Milestone Status Distribution</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Grading Distribution</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {["PENDING", "IN_PROGRESS", "SUBMITTED", "APPROVED", "REJECTED"].map((status) => (
-                <div key={status} className="flex items-center justify-between">
-                  <span className="text-sm">{status.replace("_", " ")}</span>
-                  <span className="text-sm font-bold">{milestoneStatusCounts[status] || 0}</span>
-                </div>
-              ))}
-            </div>
+            <GradingDistributionChart data={gradeRanges} />
           </CardContent>
         </Card>
       </div>

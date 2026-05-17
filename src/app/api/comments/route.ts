@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { z } from "zod"
-
-const commentSchema = z.object({
-  content: z.string().min(1).max(5000),
-  projectId: z.string().uuid(),
-  parentId: z.string().uuid().optional().nullable(),
-})
+import { commentSchema } from "@/validators/comment"
+import { commentService } from "@/services/comment.service"
+import { ZodError } from "zod"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -16,49 +11,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const data = commentSchema.parse(body)
-
-    const project = await prisma.project.findUnique({ where: { id: data.projectId } })
-    if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 })
-    }
-
-    const comment = await prisma.comment.create({
-      data: {
-        content: data.content,
-        projectId: data.projectId,
-        userId: session.user.id,
-        parentId: data.parentId || null,
-      },
-      include: { user: { select: { id: true, name: true, image: true } } },
-    })
-
-    // Create notification for project owner (if not self-comment)
-    if (project.ownerId !== session.user.id) {
-      await prisma.notification.create({
-        data: {
-          type: "COMMENT_ADDED",
-          title: "New Comment",
-          message: `${session.user.name} commented on ${project.title}`,
-          recipientId: project.ownerId,
-          senderId: session.user.id,
-          link: `/${session.user.role === "TEACHER" || session.user.role === "ADMIN" ? "teacher" : "student"}/projects/${project.id}`,
-        },
-      })
-    }
-
-    await prisma.activityLog.create({
-      data: {
-        type: "COMMENT_ADDED",
-        description: "commented on the project",
-        projectId: data.projectId,
-        userId: session.user.id,
-      },
-    })
-
+    const comment = await commentService.addComment(data, session.user.id, session.user.role, session.user.name || "")
     return NextResponse.json(comment, { status: 201 })
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (error instanceof ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
+    }
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -75,17 +35,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "projectId query param required" }, { status: 400 })
   }
 
-  const comments = await prisma.comment.findMany({
-    where: { projectId, parentId: null },
-    include: {
-      user: { select: { id: true, name: true, image: true } },
-      replies: {
-        include: { user: { select: { id: true, name: true, image: true } } },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  })
-
+  const comments = await commentService.getComments(projectId)
   return NextResponse.json(comments)
 }

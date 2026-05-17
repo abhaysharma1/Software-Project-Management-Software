@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProjectStatusChart } from "@/components/features/analytics/project-status-chart"
+import { EnrollmentChart } from "@/components/features/analytics/enrollment-chart"
 import { BarChart3, Users, BookOpen, FolderKanban, CheckCircle2 } from "lucide-react"
 
 export default async function AdminAnalyticsPage() {
@@ -17,6 +19,8 @@ export default async function AdminAnalyticsPage() {
   ])
 
   const userByRole = await prisma.user.groupBy({ by: ["role"], _count: true })
+  const projectStatuses = await prisma.project.groupBy({ by: ["status"], _count: true })
+  const classesBySemester = await prisma.class.groupBy({ by: ["semester"], _count: true })
 
   return (
     <div className="space-y-6">
@@ -61,7 +65,7 @@ export default async function AdminAnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4" /> Active Groups
+              <BarChart3 className="h-4 w-4" /> Active Groups
             </CardTitle>
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{activeGroups}</div></CardContent>
@@ -72,14 +76,17 @@ export default async function AdminAnalyticsPage() {
         <Card>
           <CardHeader><CardTitle>Users by Role</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {userByRole.map((r) => (
-                <div key={r.role} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{r.role}</span>
-                  <span className="text-sm text-muted-foreground">{r._count}</span>
-                </div>
-              ))}
-            </div>
+            <EnrollmentChart
+              data={userByRole.map((r) => ({ label: r.role, value: r._count }))}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Project Status Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <ProjectStatusChart
+              data={projectStatuses.map((s) => ({ status: s.status, count: s._count }))}
+            />
           </CardContent>
         </Card>
       </div>
