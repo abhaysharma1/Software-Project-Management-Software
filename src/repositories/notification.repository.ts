@@ -16,16 +16,16 @@ export const notificationRepository = {
     return prisma.notification.findUnique({ where: { id } })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.NotificationCreateInput | Prisma.NotificationUncheckedCreateInput) {
     return prisma.notification.create({ data: data as Prisma.NotificationCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.NotificationUpdateInput | Prisma.NotificationUncheckedUpdateInput) {
     return prisma.notification.update({ where: { id }, data: data as Prisma.NotificationUpdateInput })
   },
 
-  async updateMany(where: Prisma.NotificationWhereInput, data: Record<string, unknown>) {
-    return prisma.notification.updateMany({ where, data: data as Prisma.NotificationUpdateManyMutationInput })
+  async updateMany(where: Prisma.NotificationWhereInput, data: Prisma.NotificationUpdateManyMutationInput) {
+    return prisma.notification.updateMany({ where, data })
   },
 
   async delete(id: string) {

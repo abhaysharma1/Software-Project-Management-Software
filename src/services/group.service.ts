@@ -16,9 +16,9 @@ export const groupService = {
 
     const group = await groupRepository.create({
       name: input.name,
-      classId: input.classId,
+      class: { connect: { id: input.classId } },
       maxSize: input.maxSize,
-      creatorId: userId,
+      creator: { connect: { id: userId } },
     })
 
     await groupRepository.addMember(group.id, userId, "leader")
@@ -65,6 +65,14 @@ export const groupService = {
 
     const alreadyMember = group.members.some((m) => m.user.id === userId)
     if (alreadyMember) throw new Error("Already a member of this group")
+
+    const existingGroupInClass = await prisma.group.findFirst({
+      where: {
+        classId: group.classId,
+        members: { some: { userId } },
+      },
+    })
+    if (existingGroupInClass) throw new Error("You are already in a group for this class")
 
     const result = await prisma.$transaction(async (tx) => {
       const membership = await tx.groupMember.create({
@@ -143,8 +151,19 @@ export const groupService = {
   },
 
   async approveJoinRequest(requestId: string, userId: string) {
+    const request = await prisma.groupJoinRequest.findUnique({
+      where: { id: requestId },
+      include: { group: { include: { members: true } } },
+    })
+    if (!request) throw new Error("Join request not found")
+    if (request.status !== "PENDING") throw new Error("Join request is no longer pending")
+    if (request.group.members.length >= request.group.maxSize) throw new Error("Group is full")
+
+    const alreadyMember = request.group.members.some((m) => m.userId === request.userId)
+    if (alreadyMember) throw new Error("User is already a member of this group")
+
     const result = await prisma.$transaction(async (tx) => {
-      const request = await tx.groupJoinRequest.update({
+      const updated = await tx.groupJoinRequest.update({
         where: { id: requestId },
         data: { status: "APPROVED" },
       })
@@ -164,10 +183,10 @@ export const groupService = {
         },
       })
 
-      return { request, notification }
+      return { request: updated, notification }
     })
 
-    pushEvent(result.request.userId, "notification", result.notification)
+    pushEvent(request.userId, "notification", result.notification)
 
     return result.request
   },

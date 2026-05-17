@@ -19,7 +19,7 @@ export const commentRepository = {
     })
   },
 
-  async create(data: Record<string, unknown> & { include?: Prisma.CommentInclude }) {
+  async create(data: (Prisma.CommentCreateInput | Prisma.CommentUncheckedCreateInput) & { include?: Prisma.CommentInclude }) {
     const { include, ...createData } = data
     return prisma.comment.create({
       data: createData as Prisma.CommentCreateInput,

@@ -30,11 +30,11 @@ export const userRepository = {
 
 
 
-  async create(data: Record<string, unknown>) {
+  async   create(data: Prisma.UserCreateInput | Prisma.UserUncheckedCreateInput) {
     return prisma.user.create({ data: data as Prisma.UserCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.UserUpdateInput | Prisma.UserUncheckedUpdateInput) {
     return prisma.user.update({ where: { id }, data: data as Prisma.UserUpdateInput })
   },
 

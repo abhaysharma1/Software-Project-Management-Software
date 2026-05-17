@@ -13,7 +13,7 @@ export const githubService = {
     const repoInfo = await fetchRepoInfo(fullName)
 
     return githubRepository.create({
-      projectId,
+      project: { connect: { id: projectId } },
       fullName: repoInfo.full_name,
       url: repoInfo.html_url,
       defaultBranch: repoInfo.default_branch,

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { createMilestoneSchema } from "@/validators/milestone"
 import { milestoneService } from "@/services/milestone.service"
 import { ZodError } from "zod"
+import { handleApiError } from "@/lib/app-error"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -19,12 +20,6 @@ export async function POST(req: Request) {
     const milestone = await milestoneService.createMilestone(data, session.user.id)
     return NextResponse.json(milestone, { status: 201 })
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

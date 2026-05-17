@@ -10,11 +10,11 @@ export const milestoneRepository = {
     return prisma.milestone.findMany({ where: { projectId }, orderBy: { order: "asc" } })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.MilestoneCreateInput | Prisma.MilestoneUncheckedCreateInput) {
     return prisma.milestone.create({ data: data as Prisma.MilestoneCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.MilestoneUpdateInput | Prisma.MilestoneUncheckedUpdateInput) {
     return prisma.milestone.update({ where: { id }, data: data as Prisma.MilestoneUpdateInput })
   },
 

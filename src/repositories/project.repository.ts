@@ -21,11 +21,11 @@ export const projectRepository = {
     return prisma.project.findUnique({ where: { id }, include })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.ProjectCreateInput | Prisma.ProjectUncheckedCreateInput) {
     return prisma.project.create({ data: data as Prisma.ProjectCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.ProjectUpdateInput | Prisma.ProjectUncheckedUpdateInput) {
     return prisma.project.update({ where: { id }, data: data as Prisma.ProjectUpdateInput })
   },
 

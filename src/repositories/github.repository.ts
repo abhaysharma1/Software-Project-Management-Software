@@ -19,11 +19,11 @@ export const githubRepository = {
     })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.GitHubRepositoryCreateInput | Prisma.GitHubRepositoryUncheckedCreateInput) {
     return prisma.gitHubRepository.create({ data: data as Prisma.GitHubRepositoryCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.GitHubRepositoryUpdateInput | Prisma.GitHubRepositoryUncheckedUpdateInput) {
     return prisma.gitHubRepository.update({
       where: { id },
       data: data as Prisma.GitHubRepositoryUpdateInput,

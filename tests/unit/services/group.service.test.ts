@@ -7,6 +7,12 @@ const mockTxClient = vi.hoisted(() => ({
 }))
 
 const mockPrisma = vi.hoisted(() => ({
+  group: {
+    findFirst: vi.fn(),
+  },
+  groupJoinRequest: {
+    findUnique: vi.fn(),
+  },
   $transaction: vi.fn((cb: Function) => cb(mockTxClient)),
 }))
 
@@ -66,9 +72,11 @@ describe("groupService", () => {
         name: "Team Alpha",
         isActive: true,
         maxSize: 5,
+        classId: "c1",
         members: [],
         creatorId: "u2",
       })
+      mockPrisma.group.findFirst.mockResolvedValue(null)
       mockTxClient.groupMember.create.mockResolvedValue({ id: "m1" })
       mockTxClient.notification.create.mockResolvedValue({})
 
@@ -94,6 +102,55 @@ describe("groupService", () => {
         members: [{ user: { id: "u1" } }],
       })
       await expect(groupService.joinGroupByCode("code", "u1")).rejects.toThrow("Already a member of this group")
+    })
+  })
+
+  describe("approveJoinRequest", () => {
+    it("approves pending request", async () => {
+      mockPrisma.groupJoinRequest.findUnique.mockResolvedValue({
+        id: "r1",
+        groupId: "g1",
+        userId: "u3",
+        status: "PENDING",
+        group: {
+          maxSize: 5,
+          members: [],
+        },
+      })
+      mockTxClient.groupJoinRequest.update.mockResolvedValue({ id: "r1", status: "APPROVED" })
+      mockTxClient.groupMember.create.mockResolvedValue({})
+      mockTxClient.notification.create.mockResolvedValue({})
+
+      const result = await groupService.approveJoinRequest("r1", "u2")
+      expect(result.status).toBe("APPROVED")
+    })
+
+    it("throws when request not found", async () => {
+      mockPrisma.groupJoinRequest.findUnique.mockResolvedValue(null)
+      await expect(groupService.approveJoinRequest("bad", "u2")).rejects.toThrow("Join request not found")
+    })
+
+    it("throws when request is not pending", async () => {
+      mockPrisma.groupJoinRequest.findUnique.mockResolvedValue({
+        id: "r1",
+        status: "REJECTED",
+        group: { maxSize: 5, members: [] },
+      })
+      await expect(groupService.approveJoinRequest("r1", "u2")).rejects.toThrow("Join request is no longer pending")
+    })
+
+    it("throws when group is full", async () => {
+      mockPrisma.groupJoinRequest.findUnique.mockResolvedValue({
+        id: "r1",
+        groupId: "g1",
+        userId: "u3",
+        status: "PENDING",
+        group: {
+          maxSize: 1,
+          members: [{ userId: "u1" }, { userId: "u2" }],
+        },
+      })
+      await expect(groupService.approveJoinRequest("r1", "u2")).rejects.toThrow("Group is full")
     })
   })
 

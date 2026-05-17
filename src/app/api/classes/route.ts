@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { classSchema, paginationSchema } from "@/validators"
 import { classService } from "@/services/class.service"
 import { ZodError } from "zod"
+import { handleApiError } from "@/lib/app-error"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -19,13 +20,7 @@ export async function POST(req: Request) {
     const cls = await classService.createClass(data, session.user.id)
     return NextResponse.json(cls, { status: 201 })
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
@@ -42,12 +37,6 @@ export async function GET(req: Request) {
     const result = await classService.getClasses(session.user.role, session.user.id, pagination)
     return NextResponse.json(result)
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

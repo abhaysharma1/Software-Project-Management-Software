@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { submitSchema, gradeSchema } from "@/validators/submission"
 import { submissionService } from "@/services/submission.service"
 import { ZodError } from "zod"
+import { handleApiError } from "@/lib/app-error"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -14,13 +15,7 @@ export async function POST(req: Request) {
     const submission = await submissionService.submitMilestone(data, session.user.id, session.user.name || "", session.user.role)
     return NextResponse.json(submission, { status: 201 })
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
@@ -39,12 +34,6 @@ export async function PATCH(req: Request) {
     const submission = await submissionService.gradeSubmission(data, session.user.id, session.user.role)
     return NextResponse.json(submission)
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

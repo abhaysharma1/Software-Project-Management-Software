@@ -12,8 +12,8 @@ export const classService = {
 
     return classRepository.create({
       ...input,
-      creatorId: userId,
-      teacherId: userId,
+      creator: { connect: { id: userId } },
+      teacher: { connect: { id: userId } },
     })
   },
 

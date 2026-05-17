@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, Suspense } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import { motion } from "framer-motion"
@@ -15,6 +15,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion"
 
 function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
@@ -25,7 +26,7 @@ function LoginForm() {
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
-    const email = form.get("email") as string
+    const email = (form.get("email") as string).trim()
     const password = form.get("password") as string
 
     try {
@@ -50,14 +51,18 @@ function LoginForm() {
 
       const role = session?.user?.role
 
-      setRedirecting(true)
-      if (role === "ADMIN") router.push("/admin")
+      const callbackUrl = searchParams.get("callbackUrl")
+      if (callbackUrl && callbackUrl.startsWith("/")) {
+        router.push(callbackUrl)
+      } else if (role === "ADMIN") router.push("/admin")
       else if (role === "TEACHER") router.push("/teacher")
       else if (role === "STUDENT") router.push("/student")
       else {
         toast.error("Unable to determine user role. Please try again.")
         setRedirecting(false)
+        return
       }
+      setRedirecting(true)
     } catch {
       toast.error("Something went wrong")
     } finally {
@@ -102,7 +107,7 @@ function LoginForm() {
               </div>
             </motion.div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>Sign in to your SPMS account</CardDescription>
+            <CardDescription>Sign in to your DevTrack account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">

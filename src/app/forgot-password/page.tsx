@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     const form = new FormData(e.currentTarget)
-    const email = form.get("email") as string
+    const email = (form.get("email") as string).trim()
 
     try {
       const res = await fetch("/api/auth/forgot-password", {

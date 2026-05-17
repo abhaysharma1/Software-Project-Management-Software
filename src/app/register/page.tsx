@@ -27,13 +27,13 @@ export default function RegisterPage() {
 
     const form = new FormData(e.currentTarget)
     const data = {
-      name: form.get("name") as string,
-      email: form.get("email") as string,
+      name: (form.get("name") as string).trim(),
+      email: (form.get("email") as string).trim(),
       password: form.get("password") as string,
       confirmPassword: form.get("confirmPassword") as string,
       role: role,
-      studentId: form.get("studentId") as string,
-      department: form.get("department") as string,
+      studentId: (form.get("studentId") as string)?.trim() || undefined,
+      department: (form.get("department") as string)?.trim() || undefined,
     }
 
     try {

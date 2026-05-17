@@ -13,8 +13,8 @@ export const fileService = {
     }
 
     return fileRepository.create({
-      projectId: input.projectId,
-      uploaderId: userId,
+      project: { connect: { id: input.projectId } },
+      user: { connect: { id: userId } },
       fileName: input.fileName,
       fileSize: input.fileSize,
       mimeType: input.mimeType,

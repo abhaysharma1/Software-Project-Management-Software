@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { groupService } from "@/services/group.service"
+import { handleApiError } from "@/lib/app-error"
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -11,9 +12,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const requests = await groupService.getJoinRequests(id)
     return NextResponse.json(requests)
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

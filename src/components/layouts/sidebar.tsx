@@ -22,7 +22,7 @@ import {
   ClipboardList,
   GitBranch,
 } from "lucide-react"
-import { signOut, useSession } from "next-auth/react"
+import { useSession } from "next-auth/react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getInitials } from "@/lib/utils"
@@ -206,7 +206,7 @@ function SidebarContent({
         {!collapsed && (
           <>
             <BookOpen className="h-6 w-6 text-primary mr-2" />
-            <span className="font-bold text-lg">SPMS</span>
+            <span className="font-bold text-lg">DevTrack</span>
           </>
         )}
         {collapsed && <BookOpen className="h-6 w-6 text-primary" />}

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { createUserSchema, paginationSchema } from "@/validators"
 import { userService } from "@/services/user.service"
 import { ZodError } from "zod"
+import { handleApiError } from "@/lib/app-error"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -19,13 +20,7 @@ export async function GET(req: Request) {
     const result = await userService.listUsers({ search, role }, pagination)
     return NextResponse.json(result)
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }
 
@@ -41,12 +36,6 @@ export async function POST(req: Request) {
     const user = await userService.createUser(data)
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
-    }
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

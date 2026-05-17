@@ -9,6 +9,9 @@ export const authConfig: NextAuthConfig = {
     strategy: "jwt",
     maxAge: 365 * 24 * 60 * 60, // 1 year
   },
+  jwt: {
+    maxAge: 365 * 24 * 60 * 60, // 1 year
+  },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user

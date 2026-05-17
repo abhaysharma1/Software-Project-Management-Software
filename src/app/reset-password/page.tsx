@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, Suspense, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -14,11 +14,17 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion"
 
 function ResetPasswordForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const token = searchParams.get("token")
+  const [mounted, setMounted] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const reducedMotion = useReducedMotion()
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    setToken(new URLSearchParams(hash).get("token"))
+    setMounted(true)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -56,6 +62,14 @@ function ResetPasswordForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   if (!token) {

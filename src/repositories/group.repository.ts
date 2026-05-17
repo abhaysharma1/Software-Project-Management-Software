@@ -32,11 +32,11 @@ export const groupRepository = {
     })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.GroupCreateInput | Prisma.GroupUncheckedCreateInput) {
     return prisma.group.create({ data: data as Prisma.GroupCreateInput })
   },
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, data: Prisma.GroupUpdateInput | Prisma.GroupUncheckedUpdateInput) {
     return prisma.group.update({ where: { id }, data: data as Prisma.GroupUpdateInput })
   },
 
@@ -72,7 +72,7 @@ export const groupRepository = {
     })
   },
 
-  async updateJoinRequest(id: string, data: Record<string, unknown>) {
+  async updateJoinRequest(id: string, data: Prisma.GroupJoinRequestUpdateInput | Prisma.GroupJoinRequestUncheckedUpdateInput) {
     return prisma.groupJoinRequest.update({
       where: { id },
       data: data as Prisma.GroupJoinRequestUpdateInput,

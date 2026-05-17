@@ -38,8 +38,8 @@ describe("classService", () => {
         code: "CS101-2025",
         semester: "Fall",
         year: 2025,
-        creatorId: "u1",
-        teacherId: "u1",
+        creator: { connect: { id: "u1" } },
+        teacher: { connect: { id: "u1" } },
       })
     })
 

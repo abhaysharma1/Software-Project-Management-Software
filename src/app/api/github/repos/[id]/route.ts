@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { githubService } from "@/services/github.service"
+import { handleApiError } from "@/lib/app-error"
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -11,9 +12,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await githubService.unlinkRepository(id)
     return NextResponse.json({ success: true })
   } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return handleApiError(error)
   }
 }

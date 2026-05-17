@@ -41,7 +41,7 @@ export const milestoneService = {
     }
 
     const updateData: Record<string, unknown> = { ...input }
-    if (input.status === "APPROVED" || input.status === "REJECTED") {
+    if (input.status === "APPROVED") {
       updateData.completedAt = new Date()
     }
 

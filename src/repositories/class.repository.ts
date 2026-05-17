@@ -25,7 +25,7 @@ export const classRepository = {
     return prisma.class.findFirst({ where })
   },
 
-  async create(data: Record<string, unknown>) {
+  async create(data: Prisma.ClassCreateInput | Prisma.ClassUncheckedCreateInput) {
     return prisma.class.create({ data: data as Prisma.ClassCreateInput })
   },
 

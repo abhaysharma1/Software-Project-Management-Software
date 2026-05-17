@@ -90,8 +90,10 @@ export default function NotificationsPage() {
   }
 
   async function markRead(id: string) {
-    await fetch(`/api/notifications/${id}`, { method: "PATCH" })
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
+    const res = await fetch(`/api/notifications/${id}`, { method: "PATCH" })
+    if (res.ok) {
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
+    }
   }
 
   async function deleteNotification(id: string) {

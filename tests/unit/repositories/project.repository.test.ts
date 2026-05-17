@@ -41,7 +41,7 @@ describe("projectRepository", () => {
 
   it("create passes data through", async () => {
     mockProject.create.mockResolvedValue({ id: "p1", title: "Test" })
-    const result = await projectRepository.create({ title: "Test" })
+    const result = await projectRepository.create({ title: "Test", ownerId: "u1", classId: "c1" })
     expect(result.title).toBe("Test")
   })
 })

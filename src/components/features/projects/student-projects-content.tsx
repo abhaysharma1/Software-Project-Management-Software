@@ -79,7 +79,6 @@ export function StudentProjectsContent({
 
       toast.success("Project created")
       setOpen(false)
-      setLoading(false)
       router.refresh()
     } catch {
       toast.error("Something went wrong")
