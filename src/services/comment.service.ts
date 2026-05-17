@@ -1,7 +1,6 @@
+import { prisma } from "@/lib/prisma"
 import { projectRepository } from "@/repositories/project.repository"
 import { commentRepository } from "@/repositories/comment.repository"
-import { notificationRepository } from "@/repositories/notification.repository"
-import { activityLogRepository } from "@/repositories/activity-log.repository"
 import { paginateResponse } from "@/repositories/base.repository"
 import { pushEvent } from "@/lib/sse"
 import type { CommentInput } from "@/validators/comment"
@@ -14,35 +13,45 @@ export const commentService = {
       throw new Error("Project not found")
     }
 
-    const comment = await commentRepository.create({
-      content: input.content,
-      projectId: input.projectId,
-      userId,
-      parentId: input.parentId || null,
-      include: { user: { select: { id: true, name: true, image: true } } },
-    })
-
-    if (project.ownerId !== userId) {
-      const link = `/${userRole === "TEACHER" || userRole === "ADMIN" ? "teacher" : "student"}/projects/${project.id}`
-      const notification = await notificationRepository.create({
-        type: "COMMENT_ADDED",
-        title: "New Comment",
-        message: `${userName} commented on ${project.title}`,
-        recipientId: project.ownerId,
-        senderId: userId,
-        link,
+    const result = await prisma.$transaction(async (tx) => {
+      const comment = await tx.comment.create({
+        data: {
+          content: input.content,
+          projectId: input.projectId,
+          userId,
+          parentId: input.parentId || null,
+        },
+        include: { user: { select: { id: true, name: true, image: true } } },
       })
-      pushEvent(project.ownerId, "notification", notification)
-    }
 
-    await activityLogRepository.create({
-      type: "COMMENT_ADDED",
-      description: "commented on the project",
-      projectId: input.projectId,
-      userId,
+      if (project.ownerId !== userId) {
+        const link = `/${userRole === "TEACHER" || userRole === "ADMIN" ? "teacher" : "student"}/projects/${project.id}`
+        const notification = await tx.notification.create({
+          data: {
+            type: "COMMENT_ADDED",
+            title: "New Comment",
+            message: `${userName} commented on ${project.title}`,
+            recipientId: project.ownerId,
+            senderId: userId,
+            link,
+          },
+        })
+        pushEvent(project.ownerId, "notification", notification)
+      }
+
+      await tx.activityLog.create({
+        data: {
+          type: "COMMENT_ADDED",
+          description: "commented on the project",
+          projectId: input.projectId,
+          userId,
+        },
+      })
+
+      return comment
     })
 
-    return comment
+    return result
   },
 
   async getComments(projectId: string, pagination?: PaginationInput) {

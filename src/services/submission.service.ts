@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma"
 import { submissionRepository } from "@/repositories/submission.repository"
 import { notificationRepository } from "@/repositories/notification.repository"
 import { activityLogRepository } from "@/repositories/activity-log.repository"
@@ -25,37 +26,50 @@ export const submissionService = {
       throw new Error("Already submitted")
     }
 
-    const submission = await submissionRepository.create({
-      milestoneId: input.milestoneId,
-      userId,
-      content: input.content,
-      notes: input.notes,
-    })
-
-    await milestoneRepository.update(input.milestoneId, { status: "SUBMITTED" })
-
-    await activityLogRepository.create({
-      type: "MILESTONE_SUBMITTED",
-      description: `submitted milestone "${milestone.title}"`,
-      projectId: milestone.projectId,
-      userId,
-    })
-
-    if (project.class?.teacherId) {
-      const notification = await notificationRepository.create({
-        type: "STATUS_CHANGE",
-        title: "Milestone Submitted",
-        message: `${userName} submitted "${milestone.title}" for ${project.title}`,
-        recipientId: project.class.teacherId,
-        senderId: userId,
+    const result = await prisma.$transaction(async (tx) => {
+      const submission = await tx.milestoneSubmission.create({
+        data: {
+          milestoneId: input.milestoneId,
+          userId,
+          content: input.content,
+          notes: input.notes,
+        },
       })
-      pushEvent(project.class.teacherId, "notification", notification)
-    }
 
-    return submission
+      await tx.milestone.update({
+        where: { id: input.milestoneId },
+        data: { status: "SUBMITTED" },
+      })
+
+      await tx.activityLog.create({
+        data: {
+          type: "MILESTONE_SUBMITTED",
+          description: `submitted milestone "${milestone.title}"`,
+          projectId: milestone.projectId,
+          userId,
+        },
+      })
+
+      if (project.class?.teacherId) {
+        const notification = await tx.notification.create({
+          data: {
+            type: "STATUS_CHANGE",
+            title: "Milestone Submitted",
+            message: `${userName} submitted "${milestone.title}" for ${project.title}`,
+            recipientId: project.class.teacherId,
+            senderId: userId,
+          },
+        })
+        pushEvent(project.class.teacherId, "notification", notification)
+      }
+
+      return submission
+    })
+
+    return result
   },
 
-  async gradeSubmission(input: GradeInput, userId: string) {
+  async gradeSubmission(input: GradeInput, userId: string, userRole: string) {
     const submission = await submissionRepository.findById(input.submissionId, {
       milestone: { include: { project: { include: { class: true } } } },
     })
@@ -63,46 +77,69 @@ export const submissionService = {
       throw new Error("Submission not found")
     }
 
-    const updated = await submissionRepository.update(input.submissionId, {
-      grade: input.grade,
-      feedback: input.feedback,
-    })
+    if (userRole !== "TEACHER" && userRole !== "ADMIN") {
+      throw new Error("Only teachers can grade submissions")
+    }
+
+    const ms = (submission as any).milestone
+    const project = ms?.project
+
+    if (userRole === "TEACHER" && project?.class?.teacherId && project.class.teacherId !== userId) {
+      throw new Error("Not your class's project")
+    }
 
     const milestoneStatus = input.grade >= 50 ? "APPROVED" : "REJECTED"
-    await milestoneRepository.update(submission.milestoneId, {
-      status: milestoneStatus,
-      completedAt: new Date(),
-    })
-
     const activityType = milestoneStatus === "APPROVED" ? "MILESTONE_APPROVED" : "MILESTONE_REJECTED"
     const activityDesc = milestoneStatus === "APPROVED" ? "approved" : "rejected"
 
-    await activityLogRepository.create({
-      type: activityType,
-      description: `${activityDesc} milestone "${(submission as any).milestone.title}" with grade ${input.grade}`,
-      projectId: (submission as any).milestone.projectId,
-      userId,
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.milestoneSubmission.update({
+        where: { id: input.submissionId },
+        data: { grade: input.grade, feedback: input.feedback },
+      })
+
+      await tx.milestone.update({
+        where: { id: submission.milestoneId },
+        data: { status: milestoneStatus, completedAt: new Date() },
+      })
+
+      await tx.activityLog.create({
+        data: {
+          type: activityType,
+          description: `${activityDesc} milestone "${ms.title}" with grade ${input.grade}`,
+          projectId: ms.projectId,
+          userId,
+        },
+      })
+
+      const milestones = await tx.milestone.findMany({
+        where: { projectId: ms.projectId },
+      })
+      const totalWeight = milestones.reduce((s, m) => s + m.weight, 0)
+      const completedWeight = milestones
+        .filter((m) => m.status === "APPROVED")
+        .reduce((s, m) => s + m.weight, 0)
+      const completionPct = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0
+
+      await tx.project.update({
+        where: { id: ms.projectId },
+        data: { completionPct },
+      })
+
+      const notification = await tx.notification.create({
+        data: {
+          type: activityType,
+          title: `Milestone ${milestoneStatus === "APPROVED" ? "Approved" : "Rejected"}`,
+          message: `Your milestone "${ms.title}" was ${activityDesc} with grade ${input.grade}`,
+          recipientId: submission.userId,
+          senderId: userId,
+        },
+      })
+
+      return { updated, notification }
     })
 
-    const notification = await notificationRepository.create({
-      type: activityType,
-      title: `Milestone ${milestoneStatus === "APPROVED" ? "Approved" : "Rejected"}`,
-      message: `Your milestone "${(submission as any).milestone.title}" was ${activityDesc} with grade ${input.grade}`,
-      recipientId: submission.userId,
-      senderId: userId,
-    })
-    pushEvent(submission.userId, "notification", notification)
-
-    const ms = (submission as any).milestone
-    const milestones = await milestoneRepository.findManyByProject(ms.projectId)
-    const totalWeight = milestones.reduce((s, m) => s + m.weight, 0)
-    const completedWeight = milestones
-      .filter((m) => m.status === "APPROVED")
-      .reduce((s, m) => s + m.weight, 0)
-    const completionPct = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0
-
-    await projectRepository.update(ms.projectId, { completionPct })
-
-    return updated
+    pushEvent(submission.userId, "notification", result.notification)
+    return result.updated
   },
 }

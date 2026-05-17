@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma"
 import { classRepository } from "@/repositories/class.repository"
 import { groupRepository } from "@/repositories/group.repository"
 import { notificationRepository } from "@/repositories/notification.repository"
@@ -53,17 +54,28 @@ export const groupService = {
     const alreadyMember = group.members.some((m) => m.user.id === userId)
     if (alreadyMember) throw new Error("Already a member of this group")
 
-    const membership = await groupRepository.addMember(group.id, userId)
+    const result = await prisma.$transaction(async (tx) => {
+      const membership = await tx.groupMember.create({
+        data: { groupId: group.id, userId, role: "member" },
+        include: { user: { select: { id: true, name: true, image: true } } },
+      })
 
-    await notificationRepository.create({
-      type: "GROUP_JOINED",
-      title: "New Group Member",
-      message: `A student joined "${group.name}"`,
-      recipientId: group.creatorId,
-      senderId: userId,
+      const notification = await tx.notification.create({
+        data: {
+          type: "GROUP_JOINED",
+          title: "New Group Member",
+          message: `A student joined "${group.name}"`,
+          recipientId: group.creatorId,
+          senderId: userId,
+        },
+      })
+
+      return { membership, notification }
     })
 
-    return membership
+    pushEvent(group.creatorId, "notification", result.notification)
+
+    return result.membership
   },
 
   async leaveGroup(groupId: string, userId: string) {
@@ -79,49 +91,82 @@ export const groupService = {
     if (!group) throw new Error("Group not found")
     if (!group.isActive) throw new Error("Group is not active")
 
-    const request = await groupRepository.createJoinRequest(groupId, userId)
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.groupJoinRequest.create({
+        data: { groupId, userId },
+        include: { user: { select: { id: true, name: true, image: true } } },
+      })
 
-    const notification = await notificationRepository.create({
-      type: "GROUP_JOIN_REQUEST",
-      title: "Join Request",
-      message: `A student wants to join "${group.name}"`,
-      recipientId: group.creatorId,
-      senderId: userId,
+      const notification = await tx.notification.create({
+        data: {
+          type: "GROUP_JOIN_REQUEST",
+          title: "Join Request",
+          message: `A student wants to join "${group.name}"`,
+          recipientId: group.creatorId,
+          senderId: userId,
+        },
+      })
+
+      return { request, notification }
     })
-    pushEvent(group.creatorId, "notification", notification)
 
-    return request
+    pushEvent(group.creatorId, "notification", result.notification)
+
+    return result.request
   },
 
   async approveJoinRequest(requestId: string, userId: string) {
-    const request = await groupRepository.updateJoinRequest(requestId, { status: "APPROVED" })
-    await groupRepository.addMember(request.groupId, request.userId)
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.groupJoinRequest.update({
+        where: { id: requestId },
+        data: { status: "APPROVED" },
+      })
 
-    const notification = await notificationRepository.create({
-      type: "GROUP_JOIN_APPROVED",
-      title: "Join Request Approved",
-      message: `Your request to join the group was approved`,
-      recipientId: request.userId,
-      senderId: userId,
+      await tx.groupMember.create({
+        data: { groupId: request.groupId, userId: request.userId, role: "member" },
+      })
+
+      const notification = await tx.notification.create({
+        data: {
+          type: "GROUP_JOIN_APPROVED",
+          title: "Join Request Approved",
+          message: "Your request to join the group was approved",
+          recipientId: request.userId,
+          senderId: userId,
+        },
+      })
+
+      return { request, notification }
     })
-    pushEvent(request.userId, "notification", notification)
 
-    return request
+    pushEvent(result.request.userId, "notification", result.notification)
+
+    return result.request
   },
 
   async rejectJoinRequest(requestId: string, userId: string) {
-    const request = await groupRepository.updateJoinRequest(requestId, { status: "REJECTED" })
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.groupJoinRequest.update({
+        where: { id: requestId },
+        data: { status: "REJECTED" },
+      })
 
-    const notification = await notificationRepository.create({
-      type: "GROUP_JOIN_REJECTED",
-      title: "Join Request Rejected",
-      message: `Your request to join the group was rejected`,
-      recipientId: request.userId,
-      senderId: userId,
+      const notification = await tx.notification.create({
+        data: {
+          type: "GROUP_JOIN_REJECTED",
+          title: "Join Request Rejected",
+          message: "Your request to join the group was rejected",
+          recipientId: request.userId,
+          senderId: userId,
+        },
+      })
+
+      return { request, notification }
     })
-    pushEvent(request.userId, "notification", notification)
 
-    return request
+    pushEvent(result.request.userId, "notification", result.notification)
+
+    return result.request
   },
 
   async getJoinRequests(groupId: string) {

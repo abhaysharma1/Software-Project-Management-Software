@@ -24,10 +24,13 @@ export async function GET(req: Request) {
         }
       }, 30000)
 
-      req.signal.addEventListener("abort", () => {
+      const cleanup = () => {
         clearInterval(keepalive)
         removeClient(session.user.id, controller)
-      })
+      }
+
+      req.signal.addEventListener("abort", cleanup)
+      req.signal.addEventListener("close", cleanup)
     },
   })
 

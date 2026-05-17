@@ -33,7 +33,7 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json()
     const data = gradeSchema.parse(body)
-    const submission = await submissionService.gradeSubmission(data, session.user.id)
+    const submission = await submissionService.gradeSubmission(data, session.user.id, session.user.role)
     return NextResponse.json(submission)
   } catch (error) {
     if (error instanceof ZodError) {

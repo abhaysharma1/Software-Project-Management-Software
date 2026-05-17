@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
+const mockTxClient = vi.hoisted(() => ({
+  groupMember: { create: vi.fn() },
+  groupJoinRequest: { create: vi.fn(), update: vi.fn() },
+  notification: { create: vi.fn() },
+}))
+
+const mockPrisma = vi.hoisted(() => ({
+  $transaction: vi.fn((cb: Function) => cb(mockTxClient)),
+}))
+
 const mockClassRepo = vi.hoisted(() => ({ findFirst: vi.fn() }))
 const mockGroupRepo = vi.hoisted(() => ({
   create: vi.fn(),
@@ -13,11 +23,10 @@ const mockGroupRepo = vi.hoisted(() => ({
   findJoinRequests: vi.fn(),
   count: vi.fn(),
 }))
-const mockNotifRepo = vi.hoisted(() => ({ create: vi.fn() }))
 
+vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }))
 vi.mock("@/repositories/class.repository", () => ({ classRepository: mockClassRepo }))
 vi.mock("@/repositories/group.repository", () => ({ groupRepository: mockGroupRepo }))
-vi.mock("@/repositories/notification.repository", () => ({ notificationRepository: mockNotifRepo }))
 vi.mock("@/repositories/base.repository", () => ({
   paginateResponse: vi.fn((items, total) => ({ items, total })),
 }))
@@ -60,8 +69,8 @@ describe("groupService", () => {
         members: [],
         creatorId: "u2",
       })
-      mockGroupRepo.addMember.mockResolvedValue({ id: "m1" })
-      mockNotifRepo.create.mockResolvedValue({})
+      mockTxClient.groupMember.create.mockResolvedValue({ id: "m1" })
+      mockTxClient.notification.create.mockResolvedValue({})
 
       const result = await groupService.joinGroupByCode("code123", "u1")
       expect(result.id).toBe("m1")

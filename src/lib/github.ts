@@ -57,7 +57,9 @@ export async function fetchContributorCount(fullName: string): Promise<number> {
   if (!res.ok) return 0
   const link = res.headers.get("Link") || ""
   const match = link.match(/page=(\d+)>; rel="last"/)
-  return match ? parseInt(match[1]) : 0
+  if (match) return parseInt(match[1])
+  const body = await res.json()
+  return Array.isArray(body) ? body.length : 0
 }
 
 export interface SyncResult {

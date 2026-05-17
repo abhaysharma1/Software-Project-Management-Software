@@ -39,7 +39,12 @@ export const authService = {
       data: { identifier: input.email, token, expires },
     })
 
-    await sendPasswordResetEmail(input.email, token)
+    try {
+      await sendPasswordResetEmail(input.email, token)
+    } catch {
+      await prisma.verificationToken.delete({ where: { token } }).catch(() => {})
+      throw new Error("Failed to send reset email. Please try again later.")
+    }
 
     return { success: true }
   },

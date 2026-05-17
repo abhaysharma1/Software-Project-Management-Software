@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
+const mockTxClient = vi.hoisted(() => ({
+  comment: { create: vi.fn() },
+  notification: { create: vi.fn() },
+  activityLog: { create: vi.fn() },
+}))
+
+const mockPrisma = vi.hoisted(() => ({
+  $transaction: vi.fn((cb: Function) => cb(mockTxClient)),
+}))
+
 const mockProjectRepo = vi.hoisted(() => ({ findById: vi.fn() }))
 const mockCommentRepo = vi.hoisted(() => ({
   create: vi.fn(),
   findManyByProject: vi.fn(),
   count: vi.fn(),
 }))
-const mockNotifRepo = vi.hoisted(() => ({ create: vi.fn() }))
-const mockActivityLogRepo = vi.hoisted(() => ({ create: vi.fn() }))
 
+vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }))
 vi.mock("@/repositories/project.repository", () => ({
   projectRepository: mockProjectRepo,
 }))
 vi.mock("@/repositories/comment.repository", () => ({
   commentRepository: mockCommentRepo,
-}))
-vi.mock("@/repositories/notification.repository", () => ({
-  notificationRepository: mockNotifRepo,
-}))
-vi.mock("@/repositories/activity-log.repository", () => ({
-  activityLogRepository: mockActivityLogRepo,
 }))
 vi.mock("@/repositories/base.repository", () => ({
   paginateResponse: vi.fn((items, total) => ({ items, total })),
@@ -36,8 +39,8 @@ describe("commentService", () => {
   describe("addComment", () => {
     it("adds comment and notifies project owner", async () => {
       mockProjectRepo.findById.mockResolvedValue({ id: "p1", title: "My Project", ownerId: "u2" })
-      mockCommentRepo.create.mockResolvedValue({ id: "c1", content: "Nice work!" })
-      mockNotifRepo.create.mockResolvedValue({})
+      mockTxClient.comment.create.mockResolvedValue({ id: "c1", content: "Nice work!" })
+      mockTxClient.notification.create.mockResolvedValue({})
 
       const result = await commentService.addComment(
         { content: "Nice work!", projectId: "p1" },
@@ -45,20 +48,20 @@ describe("commentService", () => {
       )
 
       expect(result.id).toBe("c1")
-      expect(mockNotifRepo.create).toHaveBeenCalled()
-      expect(mockActivityLogRepo.create).toHaveBeenCalled()
+      expect(mockTxClient.notification.create).toHaveBeenCalled()
+      expect(mockTxClient.activityLog.create).toHaveBeenCalled()
     })
 
     it("does not notify when commenting on own project", async () => {
       mockProjectRepo.findById.mockResolvedValue({ id: "p1", title: "My Project", ownerId: "u1" })
-      mockCommentRepo.create.mockResolvedValue({ id: "c1", content: "Self comment" })
+      mockTxClient.comment.create.mockResolvedValue({ id: "c1", content: "Self comment" })
 
       await commentService.addComment(
         { content: "Self comment", projectId: "p1" },
         "u1", "STUDENT", "Alice"
       )
 
-      expect(mockNotifRepo.create).not.toHaveBeenCalled()
+      expect(mockTxClient.notification.create).not.toHaveBeenCalled()
     })
 
     it("throws when project not found", async () => {
