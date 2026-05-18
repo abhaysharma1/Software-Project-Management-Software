@@ -34,8 +34,8 @@ export function AnimatedCounter({
     startedRef.current = true
 
     if (reducedMotion) {
-      setCount(to)
-      return
+      const id = requestAnimationFrame(() => setCount(to))
+      return () => cancelAnimationFrame(id)
     }
 
     const startTime = performance.now()

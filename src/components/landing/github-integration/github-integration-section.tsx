@@ -21,6 +21,9 @@ export function GithubIntegrationSection() {
   const terminalRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
   const [currentCommitIndex, setCurrentCommitIndex] = useState(0)
+  const [intensities] = useState(() =>
+    Array.from({ length: 28 }, () => Math.random())
+  )
 
   useEffect(() => {
     if (reducedMotion) return
@@ -179,7 +182,7 @@ export function GithubIntegrationSection() {
               </div>
               <div className="flex gap-1">
                 {Array.from({ length: 28 }).map((_, i) => {
-                  const intensity = Math.random()
+                  const intensity = intensities[i]
                   return (
                     <div
                       key={i}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
@@ -19,6 +19,12 @@ export function HeroSection() {
   const previewRef = useRef<HTMLDivElement>(null)
   const glitchRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
+  const [sidebarWidths] = useState(() =>
+    ["Projects", "Teams", "Analytics", "Settings"].map(() => 60 + Math.random() * 30)
+  )
+  const [barHeights] = useState(() =>
+    [1, 2, 3, 4, 5].map(() => 20 + Math.random() * 30)
+  )
 
   useEffect(() => {
     if (reducedMotion || !sectionRef.current) return
@@ -214,11 +220,11 @@ export function HeroSection() {
               <div className="col-span-1 border-r border-white/5 bg-white/[0.02] p-4">
                 <div className="mb-4 h-2 w-20 rounded bg-white/10" />
                 <div className="space-y-3">
-                  {["Projects", "Teams", "Analytics", "Settings"].map((item) => (
+                  {["Projects", "Teams", "Analytics", "Settings"].map((item, idx) => (
                     <div
                       key={item}
                       className="h-2 rounded bg-white/10"
-                      style={{ width: `${60 + Math.random() * 30}%` }}
+                      style={{ width: `${sidebarWidths[idx]}%` }}
                     />
                   ))}
                 </div>
@@ -244,11 +250,11 @@ export function HeroSection() {
                   <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
                     <div className="mb-2 h-2 w-20 rounded bg-white/10" />
                     <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((d) => (
+                      {[1, 2, 3, 4, 5].map((d, idx) => (
                         <div
                           key={d}
                           className="h-8 flex-1 rounded-sm bg-primary/20"
-                          style={{ height: `${20 + Math.random() * 30}px` }}
+                          style={{ height: `${barHeights[idx]}px` }}
                         />
                       ))}
                     </div>

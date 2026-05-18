@@ -19,11 +19,13 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    const id = requestAnimationFrame(() => setMounted(true))
+    return () => cancelAnimationFrame(id)
   }, [])
 
   useEffect(() => {
-    setScrolled(scrollY > 50)
+    const id = requestAnimationFrame(() => setScrolled(scrollY > 50))
+    return () => cancelAnimationFrame(id)
   }, [scrollY])
 
   const handleNavClick = (href: string) => {

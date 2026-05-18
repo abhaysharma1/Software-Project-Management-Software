@@ -149,7 +149,7 @@ export function GitHubRepoManager({ projectId, repositories: initialRepos }: Git
       <CardContent className="space-y-4">
         {repos.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            No repositories linked. Click "Link Repo" to connect a GitHub repository.
+            No repositories linked. Click &ldquo;Link Repo&rdquo; to connect a GitHub repository.
           </p>
         ) : (
           <>

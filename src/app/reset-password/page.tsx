@@ -15,15 +15,20 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion"
 function ResetPasswordForm() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.slice(1)
+      return new URLSearchParams(hash).get("token")
+    }
+    return null
+  })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const reducedMotion = useReducedMotion()
 
   useEffect(() => {
-    const hash = window.location.hash.slice(1)
-    setToken(new URLSearchParams(hash).get("token"))
-    setMounted(true)
+    const id = requestAnimationFrame(() => setMounted(true))
+    return () => cancelAnimationFrame(id)
   }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

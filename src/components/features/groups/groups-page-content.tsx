@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, Search, Users, Loader2, X, Check, UserPlus } from "lucide-react"
+import { Plus, Search, Users, Loader2, X, Check, UserPlus, Crown, ExternalLink } from "lucide-react"
 import { getInitials, getStatusColor } from "@/lib/utils"
 import { toast } from "sonner"
 
 interface GroupMember {
+  id: string
+  userId: string
+  role: string
   user: { id: string; name: string; image: string | null; email: string }
 }
 
@@ -58,7 +61,8 @@ export function GroupsPageContent({
   const [processingRequest, setProcessingRequest] = useState<string | null>(null)
 
   useEffect(() => {
-    setGroups(initialGroups)
+    const id = requestAnimationFrame(() => setGroups(initialGroups))
+    return () => cancelAnimationFrame(id)
   }, [initialGroups])
 
   const filtered = groups.filter((g) =>
@@ -148,7 +152,7 @@ export function GroupsPageContent({
           <DialogTrigger className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium hover:bg-primary/90 cursor-pointer">
             <Plus className="mr-2 h-4 w-4" /> New Group
           </DialogTrigger>
-          <DialogContent className="relative">
+          <DialogContent className="">
             {loading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80 backdrop-blur-[1px]">
                 <div className="flex flex-col items-center gap-2">
@@ -220,7 +224,7 @@ export function GroupsPageContent({
                 <div className="mb-3">
                   <p className="text-sm font-medium">{group.project.title}</p>
                   <Badge className={getStatusColor(group.project.status)}>
-                    {group.project.status.replace("_", " ")}
+                    {group.project.status === "PROPOSED" ? "Proposal Pending" : group.project.status.replace("_", " ")}
                   </Badge>
                 </div>
               )}
@@ -233,16 +237,21 @@ export function GroupsPageContent({
               <ScrollArea className="h-[100px]">
                 <div className="space-y-2">
                   {group.members.map((m) => (
-                    <div key={m.user.id} className="flex items-center gap-2">
+                    <div key={m.id} className="flex items-center gap-2">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={m.user.image || ""} />
                         <AvatarFallback className="text-[10px]">{getInitials(m.user.name)}</AvatarFallback>
                       </Avatar>
                       <span className="text-sm">{m.user.name}</span>
+                      {m.role === "leader" && <Crown className="h-3 w-3 text-amber-500" />}
                     </div>
                   ))}
                 </div>
               </ScrollArea>
+
+              <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => router.push(`/teacher/groups/${group.id}`)}>
+                <ExternalLink className="mr-1 h-3 w-3" /> View Details
+              </Button>
 
               <div className="mt-3">
                 <Tabs defaultValue="members" onValueChange={(v) => { if (v === "requests") loadJoinRequests(group.id) }}>
