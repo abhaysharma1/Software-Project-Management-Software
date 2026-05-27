@@ -1,11 +1,10 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { GitBranch, GitPullRequest, GitCommitHorizontal, Star, Code2 } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { staggerContainer, staggerItem } from "@/lib/animation"
 
 const commits = [
   { msg: "feat: implement classroom API endpoints", author: "alex", branch: "main", time: "2m ago" },
@@ -17,8 +16,6 @@ const commits = [
 ]
 
 export function GithubIntegrationSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const terminalRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
   const [currentCommitIndex, setCurrentCommitIndex] = useState(0)
   const [intensities] = useState(() =>
@@ -35,32 +32,8 @@ export function GithubIntegrationSection() {
     return () => clearInterval(interval)
   }, [reducedMotion])
 
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current) return
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".github-stat",
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          stagger: 0.1,
-          duration: 0.6,
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 70%",
-            once: true,
-          },
-        }
-      )
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
-
   return (
-    <section ref={sectionRef} id="github" className="relative py-24 sm:py-32">
+    <section id="github" className="relative py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
@@ -83,8 +56,14 @@ export function GithubIntegrationSection() {
           </p>
         </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="github-stat lg:col-span-2">
+        <motion.div
+          variants={!reducedMotion ? staggerContainer : undefined}
+          initial="initial"
+          whileInView="whileInView"
+          viewport={{ once: true, margin: "-100px" }}
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="lg:col-span-2">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
               <div className="mb-4 flex items-center gap-2">
                 <GitBranch className="h-5 w-5 text-primary" />
@@ -117,9 +96,9 @@ export function GithubIntegrationSection() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="github-stat space-y-4">
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="space-y-4">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
               <div className="mb-3 flex items-center gap-2">
                 <Code2 className="h-5 w-5 text-primary" />
@@ -172,9 +151,9 @@ export function GithubIntegrationSection() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="github-stat col-span-full">
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="col-span-full">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
               <div className="mb-4 flex items-center gap-2">
                 <Star className="h-5 w-5 text-primary" />
@@ -217,8 +196,8 @@ export function GithubIntegrationSection() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   )

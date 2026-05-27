@@ -9,6 +9,8 @@ interface MousePosition {
   normalizedY: number
 }
 
+const THROTTLE_MS = 50
+
 export function useMousePosition(ref?: RefObject<HTMLElement | null>): MousePosition {
   const [position, setPosition] = useState<MousePosition>({
     x: 0,
@@ -17,9 +19,14 @@ export function useMousePosition(ref?: RefObject<HTMLElement | null>): MousePosi
     normalizedY: 0.5,
   })
   const rafRef = useRef<number>(0)
+  const lastCallRef = useRef<number>(0)
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      const now = performance.now()
+      if (now - lastCallRef.current < THROTTLE_MS) return
+      lastCallRef.current = now
+
       cancelAnimationFrame(rafRef.current)
       rafRef.current = requestAnimationFrame(() => {
         const element = ref?.current

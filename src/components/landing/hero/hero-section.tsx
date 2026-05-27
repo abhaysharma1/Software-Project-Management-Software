@@ -1,23 +1,44 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useState } from "react"
+import { motion, type Variants } from "framer-motion"
 import { ArrowRight, Play } from "lucide-react"
-import Link from "next/link"
 import { MagneticButton } from "@/components/animation/magnetic-button"
 import { SpotlightEffect } from "@/components/animation/spotlight-effect"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { HERO_CONTENT } from "@/constants/landing"
 
+const containerVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.2,
+    },
+  },
+}
+
+const wordVariants: Variants = {
+  hidden: { y: 80, opacity: 0, rotateX: -45 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    rotateX: 0,
+    transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
+  },
+}
+
+const itemVariants: Variants = {
+  hidden: { y: 30, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.8 } },
+}
+
+const previewVariants: Variants = {
+  hidden: { y: 80, opacity: 0, scale: 0.95 },
+  visible: { y: 0, opacity: 1, scale: 1, transition: { duration: 1.2, ease: [0.25, 0.1, 0.25, 1] } },
+}
+
 export function HeroSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const headlineRef = useRef<HTMLHeadingElement>(null)
-  const subtitleRef = useRef<HTMLParagraphElement>(null)
-  const ctaRef = useRef<HTMLDivElement>(null)
-  const previewRef = useRef<HTMLDivElement>(null)
-  const glitchRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
   const [sidebarWidths] = useState(() =>
     ["Projects", "Teams", "Analytics", "Settings"].map(() => 60 + Math.random() * 30)
@@ -26,89 +47,16 @@ export function HeroSection() {
     [1, 2, 3, 4, 5].map(() => 20 + Math.random() * 30)
   )
 
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current) return
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } })
-
-      tl.fromTo(
-        Array.from(headlineRef.current?.querySelectorAll(".hero-word") ?? []),
-        { y: 80, opacity: 0, rotateX: -45 },
-        { y: 0, opacity: 1, rotateX: 0, duration: 1, stagger: 0.12, ease: "back.out(1.7)" }
-      )
-        .fromTo(
-          subtitleRef.current,
-          { y: 30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.8 },
-          "-=0.4"
-        )
-        .fromTo(
-          Array.from(ctaRef.current?.querySelectorAll(".hero-cta") ?? []),
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.6, stagger: 0.15 },
-          "-=0.3"
-        )
-        .fromTo(
-          previewRef.current,
-          { y: 80, opacity: 0, scale: 0.95 },
-          { y: 0, opacity: 1, scale: 1, duration: 1.2, ease: "power4.out" },
-          "-=0.4"
-        )
-
-      if (glitchRef.current) {
-        gsap.to(glitchRef.current, {
-          opacity: 0.06,
-          duration: 0.3,
-          repeat: -1,
-          yoyo: true,
-          ease: "power1.inOut",
-        })
-      }
-
-      gsap.to(".hero-float-1", {
-        y: -20,
-        duration: 3,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-      })
-
-      gsap.to(".hero-float-2", {
-        y: 15,
-        duration: 4,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-        delay: 1,
-      })
-
-      gsap.to(".hero-float-3", {
-        y: -10,
-        x: 10,
-        duration: 3.5,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-        delay: 0.5,
-      })
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
-
   const headline = HERO_CONTENT.title.split("\n")
 
   return (
     <section
-      ref={sectionRef}
       id="hero"
       className="relative flex min-h-screen items-center overflow-hidden pt-24"
     >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          ref={glitchRef}
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 animate-pulse-glow"
           style={{
             backgroundImage:
               "repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(var(--primary) / 0.08) 2px, hsl(var(--primary) / 0.08) 4px)",
@@ -131,49 +79,57 @@ export function HeroSection() {
             {HERO_CONTENT.badge}
           </motion.div>
 
-          <h1
-            ref={headlineRef}
+          <motion.h1
+            variants={!reducedMotion ? containerVariants : undefined}
+            initial="hidden"
+            animate="visible"
             className="mb-6 text-5xl font-bold leading-[1.1] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
           >
             {headline.map((line, i) => (
               <span key={i} className="block">
                 {line.split(" ").map((word, j) => (
-                  <span
+                  <motion.span
                     key={`${i}-${j}`}
-                    className="hero-word mr-[0.3em] inline-block"
+                    variants={!reducedMotion ? wordVariants : undefined}
+                    className="mr-[0.3em] inline-block"
                     style={{ perspective: "1000px" }}
                   >
                     {word === "Project" || word === "Academia" ? (
-                      <span className="text-primary">
-                        {word}
-                      </span>
+                      <span className="text-primary">{word}</span>
                     ) : (
                       word
                     )}
-                  </span>
+                  </motion.span>
                 ))}
               </span>
             ))}
-          </h1>
+          </motion.h1>
 
-          <p
-            ref={subtitleRef}
+          <motion.p
+            variants={!reducedMotion ? itemVariants : undefined}
+            initial="hidden"
+            animate="visible"
             className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl"
           >
             {HERO_CONTENT.subtitle}
-          </p>
+          </motion.p>
 
-          <div ref={ctaRef} className="flex flex-wrap items-center justify-center gap-4">
-            <div className="hero-cta">
+          <motion.div
+            variants={!reducedMotion ? { hidden: {}, visible: { transition: { staggerChildren: 0.15 } } } : undefined}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-wrap items-center justify-center gap-4"
+          >
+            <motion.div variants={!reducedMotion ? itemVariants : undefined}>
               <MagneticButton as="a" href="/register">
                 <span className="group relative inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/30">
                   {HERO_CONTENT.primaryCta.label}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </span>
               </MagneticButton>
-            </div>
+            </motion.div>
 
-            <div className="hero-cta">
+            <motion.div variants={!reducedMotion ? itemVariants : undefined}>
               <MagneticButton>
                 <span
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-3.5 text-base font-medium text-foreground backdrop-blur-sm transition-colors hover:bg-white/10"
@@ -187,19 +143,24 @@ export function HeroSection() {
                   {HERO_CONTENT.secondaryCta.label}
                 </span>
               </MagneticButton>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
-        <div ref={previewRef} className="relative mt-20">
-          <div className="hero-float-1 absolute -left-4 -top-4 z-10 hidden rounded-lg border border-white/10 bg-background/80 px-3 py-2 text-xs backdrop-blur-xl lg:block">
+        <motion.div
+          variants={!reducedMotion ? previewVariants : undefined}
+          initial="hidden"
+          animate="visible"
+          className="relative mt-20"
+        >
+          <div className="animate-float absolute -left-4 -top-4 z-10 hidden rounded-lg border border-white/10 bg-background/80 px-3 py-2 text-xs backdrop-blur-xl lg:block">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-primary" />
               <span className="text-muted-foreground">12 active projects</span>
             </div>
           </div>
 
-          <div className="hero-float-2 absolute -bottom-4 -right-4 z-10 hidden rounded-lg border border-white/10 bg-background/80 px-3 py-2 text-xs backdrop-blur-xl lg:block">
+          <div className="animate-float-delayed absolute -bottom-4 -right-4 z-10 hidden rounded-lg border border-white/10 bg-background/80 px-3 py-2 text-xs backdrop-blur-xl lg:block">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-primary" />
               <span className="text-muted-foreground">98% completion rate</span>
@@ -275,7 +236,7 @@ export function HeroSection() {
           </div>
 
           <SpotlightEffect size={400} opacity={0.08} />
-        </div>
+        </motion.div>
 
         <div className="mt-16 text-center">
           <p className="mb-6 text-xs uppercase tracking-widest text-muted-foreground">

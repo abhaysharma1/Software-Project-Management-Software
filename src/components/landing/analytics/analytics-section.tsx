@@ -1,9 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import {
   BarChart,
   Bar,
@@ -18,6 +15,7 @@ import {
 } from "recharts"
 import { AnimatedCounter } from "@/components/animation/animated-counter"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { staggerContainer, staggerItem } from "@/lib/animation"
 
 const weeklyData = [
   { name: "Mon", commits: 45, prs: 12, reviews: 8 },
@@ -39,37 +37,10 @@ const monthlyData = [
 ]
 
 export function AnalyticsSection() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const counterRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
 
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current) return
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".analytics-card",
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          stagger: 0.15,
-          duration: 0.8,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 60%",
-            once: true,
-          },
-        }
-      )
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
-
   return (
-    <section ref={sectionRef} id="analytics" className="relative py-24 sm:py-32">
+    <section id="analytics" className="relative py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
@@ -92,16 +63,23 @@ export function AnalyticsSection() {
           </p>
         </motion.div>
 
-        <div ref={counterRef} className="mb-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <motion.div
+          variants={!reducedMotion ? staggerContainer : undefined}
+          initial="initial"
+          whileInView="whileInView"
+          viewport={{ once: true, margin: "-50px" }}
+          className="mb-16 grid grid-cols-2 gap-4 sm:grid-cols-4"
+        >
           {[
             { label: "Active Users", value: 12000, suffix: "+", prefix: "" },
             { label: "Projects Tracked", value: 50000, suffix: "+", prefix: "" },
             { label: "Institutions", value: 500, suffix: "+", prefix: "" },
             { label: "Avg Completion", value: 94, suffix: "%", prefix: "" },
           ].map((stat) => (
-            <div
+            <motion.div
               key={stat.label}
-              className="analytics-card rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-4 text-center backdrop-blur-sm"
+              variants={!reducedMotion ? staggerItem : undefined}
+              className="rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-4 text-center backdrop-blur-sm"
             >
               <p className="mb-1 text-2xl font-bold text-primary sm:text-3xl">
                 <AnimatedCounter
@@ -113,12 +91,18 @@ export function AnalyticsSection() {
                 />
               </p>
               <p className="text-xs text-muted-foreground">{stat.label}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="analytics-card rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
+        <motion.div
+          variants={!reducedMotion ? staggerContainer : undefined}
+          initial="initial"
+          whileInView="whileInView"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid gap-6 lg:grid-cols-2"
+        >
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
             <p className="mb-4 text-sm font-medium">Weekly Activity</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -139,9 +123,9 @@ export function AnalyticsSection() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="analytics-card rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
             <p className="mb-4 text-sm font-medium">Sprint Progression</p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -171,9 +155,9 @@ export function AnalyticsSection() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="analytics-card col-span-full rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
+          <motion.div variants={!reducedMotion ? staggerItem : undefined} className="col-span-full rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-6 backdrop-blur-sm">
             <p className="mb-4 text-sm font-medium">Score Trends</p>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -192,8 +176,8 @@ export function AnalyticsSection() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   )

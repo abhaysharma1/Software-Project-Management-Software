@@ -1,50 +1,19 @@
 "use client"
 
-import { useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { gsap } from "gsap"
 import { ArrowRight, Shield, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { MagneticButton } from "@/components/animation/magnetic-button"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 
 export function CTASection() {
-  const sectionRef = useRef<HTMLElement>(null)
   const reducedMotion = useReducedMotion()
 
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current) return
-
-    const ctx = gsap.context(() => {
-      gsap.to(".cta-orb-1", {
-        y: -30,
-        duration: 4,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-      })
-      gsap.to(".cta-orb-2", {
-        y: 20,
-        x: 20,
-        duration: 5,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-        delay: 1,
-      })
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
-
   return (
-    <section
-      ref={sectionRef}
-      className="relative overflow-hidden py-24 sm:py-32"
-    >
+    <section className="relative overflow-hidden py-24 sm:py-32">
       <div className="pointer-events-none absolute inset-0">
-        <div className="cta-orb-1 absolute -left-20 -top-20 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="cta-orb-2 absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-primary/15 blur-[120px]" />
+        <div className="animate-float absolute -left-20 -top-20 h-80 w-80 rounded-full bg-primary/20 blur-[120px]" />
+        <div className="animate-float-delayed absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-primary/15 blur-[120px]" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

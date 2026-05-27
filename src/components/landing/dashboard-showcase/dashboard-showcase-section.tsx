@@ -1,9 +1,7 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { BarChart3, Users, GraduationCap, Kanban } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
@@ -39,36 +37,11 @@ const DASHBOARD_TABS = [
 type DashboardId = (typeof DASHBOARD_TABS)[number]["id"]
 
 export function DashboardShowcaseSection() {
-  const sectionRef = useRef<HTMLElement>(null)
   const [activeTab, setActiveTab] = useState<DashboardId>("teacher")
   const reducedMotion = useReducedMotion()
 
-  useEffect(() => {
-    if (reducedMotion || !sectionRef.current) return
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ".dashboard-label",
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 70%",
-            once: true,
-          },
-        }
-      )
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
-
   return (
     <section
-      ref={sectionRef}
       id="dashboard-showcase"
       className="relative py-24 sm:py-32"
     >

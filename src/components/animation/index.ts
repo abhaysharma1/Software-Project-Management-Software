@@ -1,4 +1,3 @@
-export { GSAPProvider } from "./gsap-provider"
 export { LenisProvider } from "./lenis-provider"
 export { MagneticButton } from "./magnetic-button"
 export { AnimatedGrid } from "./animated-grid"

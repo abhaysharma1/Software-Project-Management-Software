@@ -1,8 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { motion, type Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 
@@ -15,48 +13,33 @@ interface TextRevealProps {
   once?: boolean
 }
 
+const containerVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.02,
+      delayChildren: 0,
+    },
+  },
+}
+
+const charVariants: Variants = {
+  hidden: { opacity: 0, y: 40, rotateX: -90 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    rotateX: 0,
+    transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] },
+  },
+}
+
 export function TextReveal({
   children,
   className,
   as: Tag = "p",
-  delay = 0,
-  stagger = 0.02,
   once = true,
 }: TextRevealProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
-
-  useEffect(() => {
-    if (reducedMotion || !containerRef.current) return
-
-    const chars = containerRef.current.querySelectorAll(".reveal-char")
-    if (chars.length === 0) return
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        chars,
-        { opacity: 0, y: 40, rotateX: -90 },
-        {
-          opacity: 1,
-          y: 0,
-          rotateX: 0,
-          duration: 0.8,
-          stagger,
-          delay,
-          ease: "back.out(1.7)",
-          scrollTrigger: once
-            ? {
-                trigger: containerRef.current,
-                start: "top 85%",
-                once: true,
-              }
-            : undefined,
-        }
-      )
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion, delay, stagger, once])
 
   if (reducedMotion) {
     return <Tag className={className}>{children}</Tag>
@@ -66,22 +49,29 @@ export function TextReveal({
 
   return (
     <Tag className={cn("inline", className)}>
-      <span ref={containerRef} className="inline">
+      <motion.span
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={once ? { once: true, margin: "-15%" } : undefined}
+        className="inline"
+      >
         {words.map((word, wi) => (
           <span key={wi} className="inline-block whitespace-nowrap">
             {word.split("").map((char, ci) => (
-              <span
+              <motion.span
                 key={`${wi}-${ci}`}
-                className="reveal-char inline-block opacity-0"
+                variants={charVariants}
+                className="inline-block"
                 style={{ perspective: "1000px" }}
               >
                 {char}
-              </span>
+              </motion.span>
             ))}
             {wi < words.length - 1 && <span className="inline-block">&nbsp;</span>}
           </span>
         ))}
-      </span>
+      </motion.span>
     </Tag>
   )
 }

@@ -9,25 +9,39 @@ interface AnimatedGridProps {
   opacity?: number
 }
 
+const FRAME_SKIP = 3
+
 export function AnimatedGrid({
   className = "",
   lineColor = "rgba(255,255,255,0.03)",
   opacity = 0.5,
 }: AnimatedGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     if (reducedMotion) return
 
     const canvas = canvasRef.current
-    if (!canvas) return
+    const container = containerRef.current
+    if (!canvas || !container) return
 
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
     let animationId: number
     let time = 0
+    let frameCount = 0
+    let isVisible = true
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible = entry.isIntersecting
+      },
+      { threshold: 0 }
+    )
+    observer.observe(container)
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1
@@ -39,7 +53,18 @@ export function AnimatedGrid({
     }
 
     const draw = () => {
-      time += 0.005
+      if (!isVisible) {
+        animationId = requestAnimationFrame(draw)
+        return
+      }
+
+      frameCount++
+      if (frameCount % FRAME_SKIP !== 0) {
+        animationId = requestAnimationFrame(draw)
+        return
+      }
+
+      time += 0.005 * FRAME_SKIP
       const w = window.innerWidth
       const h = window.innerHeight
 
@@ -83,17 +108,20 @@ export function AnimatedGrid({
     return () => {
       cancelAnimationFrame(animationId)
       window.removeEventListener("resize", resize)
+      observer.disconnect()
     }
   }, [reducedMotion, lineColor])
 
   if (reducedMotion) return null
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={`pointer-events-none fixed inset-0 z-0 ${className}`}
-      style={{ opacity }}
-      aria-hidden="true"
-    />
+    <div ref={containerRef} className="fixed inset-0 z-0 pointer-events-none">
+      <canvas
+        ref={canvasRef}
+        className={className}
+        style={{ opacity }}
+        aria-hidden="true"
+      />
+    </div>
   )
 }

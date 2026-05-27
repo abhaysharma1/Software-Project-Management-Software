@@ -1,9 +1,7 @@
 "use client"
 
-import { useRef, useEffect } from "react"
-import { motion } from "framer-motion"
-import { gsap } from "gsap"
-import { ScrollTrigger } from "gsap/ScrollTrigger"
+import { useRef } from "react"
+import { motion, useScroll, useTransform } from "framer-motion"
 import {
   GraduationCap,
   Users,
@@ -14,6 +12,7 @@ import {
 } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { HOW_IT_WORKS } from "@/constants/landing"
+import { staggerContainer, staggerItem } from "@/lib/animation"
 import { cn } from "@/lib/utils"
 
 const iconMap: Record<string, LucideIcon> = {
@@ -26,51 +25,14 @@ const iconMap: Record<string, LucideIcon> = {
 
 export function HowItWorksSection() {
   const sectionRef = useRef<HTMLElement>(null)
-  const lineRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
 
-  useEffect(() => {
-    if (reducedMotion || !lineRef.current) return
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start 60%", "end 40%"],
+  })
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        lineRef.current,
-        { scaleY: 0 },
-        {
-          scaleY: 1,
-          duration: 1.5,
-          ease: "power3.inOut",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 60%",
-            end: "bottom 40%",
-            scrub: 1,
-          },
-        }
-      )
-
-      gsap.utils.toArray<HTMLElement>(".step-card").forEach((card, i) => {
-        gsap.fromTo(
-          card,
-          { opacity: 0, x: i % 2 === 0 ? -50 : 50 },
-          {
-            opacity: 1,
-            x: 0,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 80%",
-              end: "top 40%",
-              scrub: 1,
-            },
-          }
-        )
-      })
-    })
-
-    return () => ctx.revert()
-  }, [reducedMotion])
+  const lineScale = useTransform(scrollYProgress, [0, 1], [0, 1])
 
   return (
     <section
@@ -101,21 +63,27 @@ export function HowItWorksSection() {
         </motion.div>
 
         <div className="relative">
-          <div
-            ref={lineRef}
+          <motion.div
             className="absolute left-8 top-0 hidden h-full w-px origin-top bg-border md:block"
-            style={{ transform: "scaleY(0)" }}
+            style={{ scaleY: reducedMotion ? 1 : lineScale }}
           />
 
-          <div className="space-y-16 md:space-y-24">
+          <motion.div
+            variants={!reducedMotion ? staggerContainer : undefined}
+            initial="initial"
+            whileInView="whileInView"
+            viewport={{ once: true, margin: "-50px" }}
+            className="space-y-16 md:space-y-24"
+          >
             {HOW_IT_WORKS.map((step, i) => {
               const Icon = iconMap[step.icon]
               const isLeft = i % 2 === 0
               return (
-                <div
+                <motion.div
                   key={step.step}
+                  variants={!reducedMotion ? staggerItem : undefined}
                   className={cn(
-                    "step-card relative flex flex-col md:flex-row",
+                    "relative flex flex-col md:flex-row",
                     isLeft ? "md:flex-row" : "md:flex-row-reverse"
                   )}
                 >
@@ -148,10 +116,10 @@ export function HowItWorksSection() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
